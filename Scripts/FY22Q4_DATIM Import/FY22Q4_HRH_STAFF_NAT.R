@@ -40,7 +40,7 @@
 
   #misaligned facility names
   df_misaligned <-  folderpath %>%
-    return_latest() %>%
+    return_latest("HRH_facilityname_alignment_Fy22Q4.xlsx") %>%
     readxl::read_excel()
 
   #import data
@@ -81,7 +81,7 @@
     ) %>%
     filter(!is.na(new_ou5_code),
            !(usaid_facility == "kz Mvoti Clinic" & is.na(DSD_TA))) %>%
-    mutate(usaid_facility = recode(usaid_facility, "lp Matsotsosela Clinic" = "lp Matsotsosela clinic"))
+    mutate(usaid_facility = recode(usaid_facility, "lp Matsotsosela Clinic" = "lp Matsotsosela Clinic"))
 
 # MECHS ----------------------------------------------------------------------
 
@@ -101,7 +101,8 @@ df_clean <- df %>%
                  names_to = "indicator",
                  values_to = "value") %>%
     left_join(df_cat, by = "indicator") %>%
-    mutate(OrgUnit = str_replace(OrgUnit, "clinic", "Clinic"))
+    mutate(OrgUnit = str_replace(OrgUnit, "clinic", "Clinic")) %>%
+    filter(!str_detect(indicator, 'FTE'))
 
 df_clean <- df_clean %>%
   left_join(df_misaligned %>% filter(!is.na(`MFL_contenders (FY22Q4)`)),by = c("OrgUnit" = "HRH_Facility_Name")) %>%
@@ -146,6 +147,12 @@ df_final <- df_mapped %>%
   filter(OrgUnit != "South Africa")
 
 
+df_final <- df_final %>%
+  filter(!is.na(datim_uid)) %>%
+  select(mech_uid, datim_uid,dataelement_uid,
+         categoryoptioncombo_uid, value, period) %>%
+  distinct()
+
 # EXPORT -------------------------------------------------------------------
 
-write_csv(df_final, "data-raw/q4_prep/FY22Q4_HRH_STAFF_NAT_import_20221031.csv")
+write_csv(df_final, "data-raw/q4_prep/FY22Q4_HRH_STAFF_NAT_import_20221103.csv")
