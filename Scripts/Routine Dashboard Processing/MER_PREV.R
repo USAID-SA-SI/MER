@@ -6,7 +6,7 @@ library(glamr)
 
 memory.limit(size=500000)
 
-current_pd<-"FY22Q3i"
+current_pd<-"FY22Q4i" #change each period
 
 
 # READ IN FILES ----------------------------------------------------------------

@@ -19,7 +19,7 @@ genie_files<-list.files(here("Data"),pattern="PSNU_IM")
 
 genie<-here("Data",genie_files) %>% 
   map(read_msd, save_rds=FALSE, remove_txt = FALSE) %>% 
-#   reduce(rbind) %>% 
+  reduce(rbind) %>%
 #   filter(fiscal_year %in% c("2021"))
 # 
 # 
@@ -51,7 +51,7 @@ dsp_lookback<-read_excel(here("Data","dsp_attributes_2022-05-17.xlsx")) %>%
   select(-MechanismID)
 
 # EPI IN -----------------------------------------------------------------------
-epi<-read_tsv(here("Data","2022-07-06_Naomi_Thembisa_processed.txt"))
+epi<-read_tsv(here("Data","2022-07-23_Naomi_Thembisa_processed.txt"))
 
 
 

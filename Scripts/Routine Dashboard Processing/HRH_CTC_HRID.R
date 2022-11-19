@@ -8,7 +8,7 @@ library(janitor)
 
 
 # REFERENCE
-current_q<-"FY22Q3"
+current_q<-"FY22Q4"
 
 
 
@@ -27,7 +27,7 @@ hrid<-hrid %>%
   rename(mech_code=MechanismID,
          mech_name=ImplementingMechanismName) %>% 
   mutate(mech_code=as.character(mech_code)) %>% 
-  gather(period,value,FY2017Q2:FY2022Q3) %>% 
+  gather(period,value,FY2017Q2:last_col()) %>% 
   clean_names() %>% 
   group_by_if(is.character) %>% 
   summarize(value = sum(value, na.rm = T))  %>% 

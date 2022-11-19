@@ -1,0 +1,31 @@
+prev_survey_available:
+- ZAF2005HSRC
+- ZAF2008HSRC
+- ZAF2012HSRC
+- ZAF2017HSRC
+- ZAF2016DHS
+prev_survey_available_quarters:
+- CY2005Q2
+- CY2008Q3
+- CY2012Q2
+- CY2017Q2
+- CY2016Q3
+artcov_survey_available:
+- ZAF2012HSRC
+- ZAF2017HSRC
+prev_survey_ids:
+- ZAF2016DHS
+- ZAF2017HSRC
+prev_survey_quarters:
+- CY2017Q2
+- CY2016Q3
+artcov_survey_ids: ZAF2017HSRC
+artcov_survey_quarters: CY2017Q2
+artnum_calendar_quarter_t1: CY2017Q2
+artnum_calendar_quarter_t2: CY2021Q3
+anc_prev_year_t1: 2017.0
+anc_prev_year_t2:
+- 2020
+- 2021
+art_number_spectrum_aligned: .na
+anc_testing_spectrum_aligned: .na

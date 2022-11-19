@@ -7,7 +7,10 @@ library(glamr)
 memory.limit(size=500000)
 
 
-current_pd<-"FY22Q3i"
+current_pd<-"FY22Q3i" #change each time to refelct current period
+
+
+devtools::install_github("USAID-SA-SI/tierdrop")
 
 # READ IN FILES ----------------------------------------------------------------
 ind_ref<-pull(read_excel(here("Data", "indicator_ref.xlsx"),
@@ -36,7 +39,8 @@ msd<-here("Data",msd_files) %>%
 
 subset & merge ----------------------------------------------------------------
 msd<-msd %>%
-  filter(fiscal_year %in% c("2018","2019","2020","2021"))
+  filter(fiscal_year %in% c("2015","2016",
+                            "2017", "2018","2019","2020","2021"))
 
 print(distinct(msd,fiscal_year))
 
@@ -116,7 +120,7 @@ print(data_check)
   
 # Dataout ----------------------------------------------------------------------
 
-filename<-paste(Sys.Date(),"MER_CTX",current_pd,"attributes.txt",sep="_")
+filename<-paste(Sys.Date(),"MER_CTX",current_pd,"attributes_fy15-22.txt",sep="_")
 
 write_tsv(final, file.path(here("Dataout"),filename,na=""))
 
