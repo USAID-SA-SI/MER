@@ -10,9 +10,8 @@
 #                 
 #  sources files used in the code include:                                                                            
 #              1) TB_ART results from NDOH                                                                        
-#              2) Host Country Results Facility based from DATIM Support                                                
-#              3) Data Exchange Organisation Units from DATIM Support           
-#              4) Genie extract for MSD skeleton    
+#              2) Host Country Results Facility based from DATIM Support                                                        
+#              3) Genie extract for MSD skeleton    
 #
 #################################################################################
 
@@ -35,7 +34,6 @@ setwd("C:\\Users\\ctrapence\\Documents\\Clement Trapence-South Africa WP\\SCRIPT
 
 #Reading genie data for setting up the framework
 Genie<-read.delim2(("C:\\Users\\ctrapence\\Documents\\Clement Trapence-South Africa WP\\SCRIPTS\\TB_ART\\Genie.txt")) 
-
 
 #MER Structured -This is to get the structure 
 Genie_TB_ART<-Genie %>% filter(indicator=="TB_ART" )  %>%  select(-(qtr1:qtr4),-cumulative) %>%  filter(fiscal_year==2022) 
