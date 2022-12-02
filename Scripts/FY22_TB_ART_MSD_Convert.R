@@ -129,9 +129,7 @@ Genie_TB_STAT<-Genie %>% filter(indicator=="TB_STAT" & statushiv=="Positive") %>
 #Cleaning the category option combo from Abe's file
 tempFile1.3<-left_join(New_genie,Genie_TB_STAT,by=c("categoryoptioncombouid"="category_temp","orgUnitUID"="orgunituid") ) %>%  select(-indicator.y,-statushiv.y  ,- indicator.y,-dataelementuid.y,-categoryoptioncomboname.y ,-categoryoptioncombouid.y)
 
-
 #Final MSD like output
-
 
 write.xlsx(tempFile1.3,"TB_ART_MSD_2022.xlsx")
 
