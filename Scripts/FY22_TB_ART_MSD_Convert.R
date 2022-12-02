@@ -1,8 +1,9 @@
 
 # Title: MSD Convert Script
 # Author: C. Trapence
-# Purpose: Automating the process of Reporting AGYW_PREV for Inter-agency
+# Purpose: Translating the Quarterly NDOH dataset to an MSD
 # Date:2022-11-22
+#Updated: 2022-12-02
 #Load Required libraries
 # Red text symbolizes comments
 
