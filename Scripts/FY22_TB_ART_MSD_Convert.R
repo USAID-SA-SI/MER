@@ -1,9 +1,10 @@
 
 # Title: MSD Convert Script
 # Author: C. Trapence
+# Updated by: G. Sarfaty
 # Purpose: Translating the Quarterly NDOH dataset to an MSD
 # Date:2022-11-22
-# Updated: 2022-12-02
+# Updated: 2022-12-12
 # Load Required libraries
 #################################################################################
 #                 
@@ -24,35 +25,45 @@ library(googledrive)
 library(glamr)
 library(openxlsx)
 library(sqldf)
+library(gophr)
 
 #Easy search
-
 file_pattern <- 'Df\\.[0-9]\\.csv' # regexp pattern to match the file name format
-
-#Preparing the working directory for file retrieval and export
-setwd("C:\\Users\\ctrapence\\Documents\\Clement Trapence-South Africa WP\\SCRIPTS\\TB_ART\\")
+genie_files<-list.files(here("Data/site"),pattern="Daily")
 
 #Reading genie data for setting up the framework
-Genie<-read.delim2(("C:\\Users\\ctrapence\\Documents\\Clement Trapence-South Africa WP\\SCRIPTS\\TB_ART\\Genie.txt")) 
+Genie<-read_tsv(here("Data/site",genie_files)) 
 
 #MER Structured -This is to get the structure 
-Genie_TB_ART<-Genie %>% filter(indicator=="TB_ART"  | grepl("TB_STAT",indicator))  %>%  select(-(qtr1:qtr4),-cumulative) %>%  filter(fiscal_year==2022) 
+Genie_TB_ART<-Genie %>% 
+  filter(indicator=="TB_ART"  | grepl("TB_STAT",indicator))  %>%  
+  select(-(qtr1:qtr4),-cumulative) %>%  
+  filter(fiscal_year==2022) 
 
 #This part is using the file the Abe  consolidated for the previous quarters.We weill tweek this code to use Our process inport file in FY23
-tempFile<-read.csv("TB_ART_Quarterly 2022-11-17.csv") %>% mutate(dataelementuid=if_else(dataElementName=="TB_ART_Quarterly (N, TA, Age/Sex/NewExistingArt/HIVStatus): TB/HIV on ART","Szuf9YjHjTL","Qc1AaYpKsjs")) %>% 
- mutate(period= recode(period,"2021Q4"="FY22Q1","2022Q1"="FY22Q2","2022Q2"="FY22Q3","2022Q3"="FY22Q4")) %>% mutate(coc=gsub(" ","",coc))
+tempFile<-read.csv(here("Data","TB_ART_Quarterly 2022-11-17.csv")) %>% 
+  mutate(dataelementuid=if_else(dataElementName=="TB_ART_Quarterly (N, TA, Age/Sex/NewExistingArt/HIVStatus): TB/HIV on ART","Szuf9YjHjTL","Qc1AaYpKsjs")) %>% 
+  mutate(period= recode(period,"2021Q4"="FY22Q1","2022Q1"="FY22Q2","2022Q2"="FY22Q3","2022Q3"="FY22Q4")) %>% 
+  mutate(coc=gsub(" ","",coc))
 
 #Data sets, elements and combos paramaterized from DATIM
-Data_elements_cd<-read.csv("Data sets, elements and combos paramaterized.csv")%>% mutate(categoryoptioncombo =gsub(" ","",categoryoptioncombo ))
+Data_elements_cd<-read.csv(here("Data","Data sets, elements and combos paramaterized.csv"))%>% 
+                             mutate(categoryoptioncombo =gsub(" ","",categoryoptioncombo ))
 
 #Cleaning the category option combo from Abe's file
-tempFile1.1<-left_join(tempFile,Data_elements_cd,by=c("coc"="categoryoptioncombo","dataelementuid")) %>%  select (mechCode,attributeOptionCombo,	orgUnitUID,	dataelementuid,	categoryoptioncombouid	,value,	period) %>% rename(dataelementuid=dataelementuid)
+tempFile1.1<-left_join(tempFile,Data_elements_cd,by=c("coc"="categoryoptioncombo","dataelementuid")) %>%  
+  select (mechCode,attributeOptionCombo,	orgUnitUID,	dataelementuid,	categoryoptioncombouid	,value,	period) %>% 
+  rename(dataelementuid=dataelementuid)
+
 
 #Linking NDOH to genie skeleton
 
 New_genie<-left_join(tempFile1.1,Genie_TB_ART,by=c("orgUnitUID"="orgunituid","categoryoptioncombouid"="categoryoptioncombouid","dataelementuid")) %>% 
-  
-  filter(!is.na(sitename)) %>%  spread(key = period,value = value) %>% rename_with( str_replace,pattern="FY22Q",replacement="qtr",matches('FY22Q' )) %>%  mutate(cumulative=qtr4) %>% select(-targets)
+  filter(!is.na(sitename)) %>%  
+  spread(key = period,value = value) %>% 
+  rename_with( str_replace,pattern="FY22Q",replacement="qtr",matches('FY22Q' )) %>%  
+  mutate(cumulative=qtr4) %>% 
+  select(-targets)
 
 #Adding TB_STAT_POS to create or mimic DATIM targets#########
 #TB_STAT_POS is a denominator for TB_ART 
@@ -130,7 +141,7 @@ tempFile1.3<-left_join(New_genie,Genie_TB_STAT,by=c("categoryoptioncombouid"="ca
 
 #Final MSD like output
 
-write.xlsx(tempFile1.3,"TB_ART_MSD_2022.xlsx")
+write.xlsx(tempFile1.3,file.path(here("Dataout","TB_ART_MSD_2022.xlsx")))
 
 
 
