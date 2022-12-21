@@ -43,7 +43,7 @@ Data_elements_cd<-read.csv(here("Data","Data sets, elements and combos paramater
   select(-dataset)
   # mutate(categoryoptioncombo =gsub(" ","",categoryoptioncombo ))
 
-# MERGE IMPORT W DATA ALEMENT CODE LIST
+# MERGE IMPORT W DATA ELEMENT CODE LIST
 tempFile1.2<-tempFile %>% 
   left_join(Data_elements_cd,by="key") %>% 
   rename(mech_code=mechCode,
@@ -57,7 +57,7 @@ Genie<-read_tsv(here("Data/site",genie_files))
 
 
 Genie_TB_ART<-Genie %>% 
-  filter(indicator=="TB_ART"  | grepl("TB_STAT",indicator))  %>%  
+  filter(indicator=="TB_ART")  %>%  
   select(-(qtr1:qtr4),-cumulative,-targets,-approvallevel,-approvalleveldescription) %>%  
   filter(fiscal_year %in% c("2021","2022")) %>% 
   select(-fiscal_year) %>% 
@@ -76,7 +76,7 @@ final_df<-tempFile1.2 %>%
   rename(psnu=psnu.x)
 
 
-# DATA CHECK
+# DATA CHECKS ------------------------------------------------------------------
 check<-final_df %>% 
   group_by(indicator,period) %>% 
   summarize_at(vars(value),sum,na.rm=TRUE) %>% 
@@ -84,7 +84,23 @@ check<-final_df %>%
 
 # NAS
 NAS<-final_df %>% 
-  filter(is.na(sitename))
+  filter(is.na(sitename)) %>% 
+  distinct(period,orgunituid,organisationUnit) %>% 
+  rename(sitename=organisationUnit)
+
+genie_sites<-Genie %>% 
+  filter(indicator=="TB_ART",
+         standardizeddisaggregate=="Total Numerator") %>% 
+  reshape_msd("long") %>% 
+  distinct(period,orgunituid,sitename)
+
+missing_datim<-NAS %>% 
+  anti_join(genie_sites,by=c("period","orgunituid","sitename"))
+
+MFOdBYFcwLV<-tempFile1.2 %>% 
+  filter(orgunituid=="MFOdBYFcwLV") %>%
+  group_by(orgunituid,period) %>% 
+  summarize_at(vars(value),sum,na.rm=TRUE)
 
 # EXPORT
 write.xlsx(final_df,file.path(here("Dataout","TB_ART_MSD_2022.xlsx")))
