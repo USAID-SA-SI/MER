@@ -4,7 +4,7 @@
 # Updated by: G. Sarfaty
 # Purpose: Translating the Quarterly NDOH dataset to an MSD
 # Date:2022-11-22
-# Updated: 2022-12-12
+# Updated: 2022-12-21
 # Load Required libraries
 #################################################################################
 #                 
@@ -27,80 +27,61 @@ library(openxlsx)
 library(sqldf)
 library(gophr)
 
+current_pd<-"FY22Q4"
 
-
-# CDC processed import format
-tempFile<-read.csv(here("Data","TB_ART_Quarterly 2022-11-17.csv")) %>% 
-  mutate(dataelementuid=if_else(dataElementName=="TB_ART_Quarterly (N, TA, Age/Sex/NewExistingArt/HIVStatus): TB/HIV on ART","Szuf9YjHjTL","Qc1AaYpKsjs")) %>% 
-  mutate(period= recode(period,"2021Q4"="FY21Q4","2022Q1"="FY22Q1","2022Q2"="FY22Q2","2022Q3"="FY22Q3")) %>% 
-  rename(categoryoptioncombo=coc) %>% 
-  unite(key,dataelementuid,categoryoptioncombo,sep="_")
-
-
-# DATIM DATA ELEMENT CODE LIST
-Data_elements_cd<-read.csv(here("Data","Data sets, elements and combos paramaterized.csv")) %>% 
-  unite(key,dataelementuid,categoryoptioncombo,sep="_",remove=FALSE) %>% 
-  select(-dataset)
-  # mutate(categoryoptioncombo =gsub(" ","",categoryoptioncombo ))
-
-# MERGE IMPORT W DATA ELEMENT CODE LIST
-tempFile1.2<-tempFile %>% 
-  left_join(Data_elements_cd,by="key") %>% 
-  rename(mech_code=mechCode,
-         orgunituid=orgUnitUID) %>% 
-  mutate(mech_code=as.character(mech_code))
-
-#GENIE FORMAT
+#GENIE REF TABLE CREATION
 genie_files<-list.files(here("Data/site"),pattern="Daily")
 
 Genie<-read_tsv(here("Data/site",genie_files)) 
 
+hierarchy<-Genie %>% 
+  filter(fiscal_year=="2022") %>% 
+  distinct(orgunituid,sitename,operatingunit,
+           operatingunituid,country,snu1,snu1uid,psnu,psnuuid,snuprioritization,
+           typemilitary,dreams,communityuid,community,facilityuid,facility,
+           sitetype)
 
-Genie_TB_ART<-Genie %>% 
-  filter(indicator=="TB_ART")  %>%  
-  select(-(qtr1:qtr4),-cumulative,-targets,-approvallevel,-approvalleveldescription) %>%  
-  filter(fiscal_year %in% c("2021","2022")) %>% 
-  select(-fiscal_year) %>% 
-  mutate(statuscx=as.character(statuscx)) %>% 
-  distinct_all() %>%
-  mutate(source_name="NDoH File")
-
-
-# FINAL MERGE
-final_df<-tempFile1.2 %>% 
-  left_join(Genie_TB_ART, by=c("dataelementuid","categoryoptioncombouid","orgunituid",
-                               "mech_code")) %>% 
-  filter(!is.na(value)) %>% 
-  mutate(indicator="TB_ART_QUARTERLY") %>% 
-  select(-psnu.y,key) %>% 
-  rename(psnu=psnu.x)
+data_elements<-Genie %>% 
+  distinct(dataelementuid,indicator,numeratordenom,indicatortype,disaggregate,
+           standardizeddisaggregate,categoryoptioncombouid,categoryoptioncomboname,
+           ageasentered,age_2018,age_2019,trendscoarse,sex,statushiv,statustb,
+           statuscx,hiv_treatment_status,otherdisaggregate,otherdisaggregate_sub,
+           modality) %>% 
+  unite(key,dataelementuid,categoryoptioncomboname,sep="_")
 
 
-# DATA CHECKS ------------------------------------------------------------------
+
+# IMPORT FORMATTED FILE FROM NDoH
+tempFile<-read.csv(here("Data","TB_ART_Quarterly 2022-11-17.csv")) %>% 
+  mutate(dataelementuid=if_else(dataElementName=="TB_ART_Quarterly (N, TA, Age/Sex/NewExistingArt/HIVStatus): TB/HIV on ART","Szuf9YjHjTL","Qc1AaYpKsjs")) %>% 
+  mutate(period= recode(period,"2021Q4"="FY21Q4","2022Q1"="FY22Q1","2022Q2"="FY22Q2","2022Q3"="FY22Q3")) %>% 
+  rename(categoryoptioncomboname=coc) %>% 
+  unite(key,dataelementuid,categoryoptioncomboname,sep="_") %>% 
+  select(-psnu,-organisationUnit)
+
+
+# MERGE IMPORT REF TABLES FROM GENIE & DATIM API
+final_df<-tempFile %>% 
+  left_join(data_elements,by="key") %>% 
+  rename(mech_code=mechCode,
+         orgunituid=orgUnitUID) %>% 
+  mutate(mech_code=as.character(mech_code)) %>% 
+  left_join(hierarchy,by="orgunituid") %>% 
+  rename_official() %>% 
+  select(-key) %>% 
+  mutate(period_type="results",
+         indicator="TB_ART_NDOH_QUARTERLY")
+
+
+
 check<-final_df %>% 
   group_by(indicator,period) %>% 
   summarize_at(vars(value),sum,na.rm=TRUE) %>% 
   print()
 
-# NAS
-NAS<-final_df %>% 
-  filter(is.na(sitename)) %>% 
-  distinct(period,orgunituid,organisationUnit) %>% 
-  rename(sitename=organisationUnit)
-
-genie_sites<-Genie %>% 
-  filter(indicator=="TB_ART",
-         standardizeddisaggregate=="Total Numerator") %>% 
-  reshape_msd("long") %>% 
-  distinct(period,orgunituid,sitename)
-
-missing_datim<-NAS %>% 
-  anti_join(genie_sites,by=c("period","orgunituid","sitename"))
-
-MFOdBYFcwLV<-tempFile1.2 %>% 
-  filter(orgunituid=="MFOdBYFcwLV") %>%
-  group_by(orgunituid,period) %>% 
-  summarize_at(vars(value),sum,na.rm=TRUE)
 
 # EXPORT
-write.xlsx(final_df,file.path(here("Dataout","TB_ART_MSD_2022.xlsx")))
+
+filename<-paste(Sys.Date(),"TB_ART_QUARTERLY",current_pd,".txt",sep="_")
+
+write_tsv(final_df, file.path(here("Dataout"),filename,na=""))
