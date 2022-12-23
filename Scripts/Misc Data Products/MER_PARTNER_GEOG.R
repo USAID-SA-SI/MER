@@ -23,12 +23,22 @@ genie<-here("Data/site",genie_files) %>%
   
 geog_df<-genie %>% 
   distinct(orgunituid,psnu,psnuuid,
-           community,communityuid,facility,facilityuid,sitename,sitetype,mech_code,prime_partner_name) %>% 
+           community,communityuid,facility,facilityuid,sitename,sitetype,award_number,
+           mech_code,prime_partner_name) %>% 
   relocate(sitetype, .before=sitename) %>% 
   relocate(community, .after=psnuuid) %>% 
   relocate(facility, .after=community) %>% 
   relocate(communityuid, .after=community) %>% 
-  relocate(facilityuid, .after=facility)
+  relocate(facilityuid, .after=facility) %>% 
+  mutate(technical_area=case_when(
+    mech_code %in% c("70310","70290","70287","70301","81902") ~ "Care & Treatment",
+    mech_code %in% c("80002","80004","70311","70307","14295","14631",
+                     "81904") ~ "OVC",
+    mech_code %in% c("70306","82199") ~ "KP",
+    mech_code %in% c("160611","80008","80007") ~ "DREAMS",
+    TRUE ~ ""
+  ))
+
 
 
 # DATA CHECK 
