@@ -199,8 +199,13 @@ dhis_22<-dhis_22 %>%
   group_by_if(is.character) %>% 
   summarize_at(vars(value),sum,na.rm=TRUE) %>% 
   ungroup() %>% 
-  left_join(prioritization_dhis,by="psnu")
-
+  mutate(psnu=case_when(
+    psnu=="fs Thabo Mofutsanyana District Municipality" ~ "fs Thabo Mofutsanyane District Municipality",
+    TRUE ~ psnu)) %>% 
+  left_join(prioritization_dhis,by="psnu") 
+  
+  
+  
 
 #NDOH TARGETS
 doh_t<-read_excel(here("Data", "Targets program.xlsx")) %>% 
@@ -248,7 +253,7 @@ df_final<-bind_rows(df_epi,ps,cash,doh_t) %>%
   
 
 # EXPORT
-filename<-paste(Sys.Date(),"Naomi_MER_DHIS_NDoH","indicator_age_v1.4.txt",sep="_")
+filename<-paste(Sys.Date(),"Naomi_MER_DHIS_NDoH","indicator_age_v1.5.txt",sep="_")
 
 write_tsv(df_final, file.path(here("Dataout"),filename,na=""))
 
