@@ -57,7 +57,7 @@ data_elements<-Genie %>%
 NDOH<-list.files(here("Data"),pattern="Final")
 tempfile<-read_xlsx((here("Data",NDOH)),sheet = "TB_ART" ) %>% rename(new_ou5_code=Code) %>% mutate(FineAgeGroup=case_when(FineAgeGroup=="50-54" |FineAgeGroup=="55-59"|FineAgeGroup=="60-64" | FineAgeGroup=="65+"~"50+",TRUE ~FineAgeGroup))
 
-tempfile<-left_join(tempfile,df_fac,by=c("new_ou5_code"),USAI)  %>% mutate(dataelementuid=if_else(dsd_ta=="TA","Szuf9YjHjTL","Qc1AaYpKsjs"))%>% 
+tempfile<-left_join(tempfile,df_fac,by=c("new_ou5_code"))  %>% mutate(dataelementuid=if_else(dsd_ta=="TA","Szuf9YjHjTL","Qc1AaYpKsjs"))%>% 
   mutate(category_temp=case_when(Sex=="Female" & (FineAgeGroup=="<1" & ARTStatus=="New on ART") ~"cW1wQgs5hyV",Sex=="Male" & (FineAgeGroup=="<1" & ARTStatus=="New on ART") ~"MQZqURahCb8",  
                                  Sex=="Female" & (FineAgeGroup=="1-4" & ARTStatus=="New on ART") ~"JTZmQVEtlTV", Sex=="Male" & (FineAgeGroup=="1-4" & ARTStatus=="New on ART")~"ay15X6h55Py" ,
                                  Sex=="Female" & (FineAgeGroup=="5-9" & ARTStatus=="New on ART") ~"AGQa2tzIoc1",Sex=="Male" & (FineAgeGroup=="5-9" & ARTStatus=="New on ART") ~"suJrZbdKKRW",
