@@ -5,29 +5,26 @@ library(here)
 library(glamr)
 library(janitor)
 
+setwd("C:/Users/ctrapence/Documents")
 
 
 # REFERENCE
 current_q<-"FY22Q4"
 
 
-
-
-
 # HRID ---- MUST BE XLSX, NOT XLSB
 HRID_file<-list.files(here("Data"),pattern="Factview")
 
-hrid<-read_excel(here("Data",HRID_file))
-
+hrid<-read_excel(here("Data",HRID_file)) %>%  rename(DSP_current_FV=DSP_current,DSP_FV=DSP)
 
 
 
 # MUNGE ----------------------------------------------------------------
-hrid<-hrid %>%
-  rename(mech_code=MechanismID,
+hrid2<-hrid %>%
+  rename(mech_code=mechanism_id ,
          mech_name=ImplementingMechanismName) %>% 
   mutate(mech_code=as.character(mech_code)) %>% 
-  gather(period,value,FY2017Q2:last_col()) %>% 
+  gather(period,value,FY2017Q2:FY2022Q4) %>% 
   clean_names() %>% 
   group_by_if(is.character) %>% 
   summarize(value = sum(value, na.rm = T))  %>% 
@@ -38,10 +35,10 @@ hrid<-hrid %>%
   mutate(short_name=psnu,
          short_name=str_replace_all(short_name, "District Municipality","DM"),
          short_name=str_replace_all(short_name, "Metropolitan Municipality", "MM")) %>% 
-  rename(occ_classification=disaggregate,
-         cadre=category_option_combo_name,
-         service_delivery_model=other_disaggregate,
-         snuprioritization=psnu_priority) %>% 
+ # rename(#occ_classification=disaggregate,
+         #cadre=cadre,
+         #service_delivery_model=occ_classification,
+         #snuprioritization=prioritization) %>% 
   mutate(CHW_like = case_when(occ_classification=="Community Development Workers"& service_delivery_model=="Community-based" ~ "Yes",
                               occ_classification=="Community Development Workers"& service_delivery_model=="Facility site - Roving" ~ "Yes",
                               occ_classification=="Community Development Workers"& service_delivery_model=="Facility site - Seconded" ~ "Yes",
@@ -81,8 +78,8 @@ hrid<-hrid %>%
                               occ_classification=="WBOT CHW" ~ "Yes",
                               TRUE ~ "No"))
 
-  
-  
+
+
 # CONTEXT FILES IN -------------------------------------------------------------
 dsp_lookback<-read_excel(here("Data","DSP_attributes_2022-05-17.xlsx")) %>% 
   rename(agency_lookback=`Agency lookback`) %>% 
@@ -92,7 +89,7 @@ dsp_lookback<-read_excel(here("Data","DSP_attributes_2022-05-17.xlsx")) %>%
 
 # BIND FILES ----------------------------------------------------------------
 
-final<-hrid %>% 
+final<-hrid2 %>% 
   unite(DSPID,mech_code,short_name,sep="",remove=FALSE) %>%  
   mutate(highburden=case_when(
     psnu=="gp City of Johannesburg Metropolitan Municipality" ~ "YES",
@@ -117,11 +114,11 @@ final<-final %>%
   mutate(indicator2=indicator,
          value2=value) %>% 
   spread(indicator2,value2) %>% 
-  left_join(dsp_lookback,by="DSPID") 
-  
+  left_join(dsp_lookback,by="DSPID") %>%  select(-prioritization,-chw_like,-high_burden) 
 
 
-  
+
+
 # Dataout ----------------------------------------------------------------------
 
 filename<-paste(Sys.Date(), current_q, "HRID_CTC_attributes.txt",sep="_")
