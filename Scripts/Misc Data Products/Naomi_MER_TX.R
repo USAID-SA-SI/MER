@@ -8,7 +8,8 @@ library(tameDP)
 library(lubridate)
 
 
-
+#psnu_ref
+psnu_agency<-read_excel(here("Data", "psnu_agency_ref.xlsx"))
 
 
 # get PLHIV from Sept 2021 Naomi | Adopted by estimates TWG---------------------
@@ -24,7 +25,8 @@ df_epi<-read_csv(epi_path) %>%
          ageasentered=age) %>% 
   mutate(period="FY22",
          period_type="cumulative",
-         source="NAOMI")
+         source="NAOMI") %>% 
+  left_join(psnu_agency,by="psnu")
 
 
 
@@ -35,7 +37,7 @@ genie_files<-list.files(here("Data"),pattern="Daily")
 genie<-here("Data",genie_files) %>% 
   map(read_msd, save_rds=FALSE, remove_txt = FALSE) %>% 
   reduce(rbind) %>%
-  filter(fiscal_year %in% c("2022","2023"))
+  filter(fiscal_year %in% c("2021","2022","2023"))
 
 df_genie<-genie %>% 
   filter(indicator %in% c("HTS_TST","HTS_TST_POS","TX_NEW","TX_CURR","TX_PVLS"),
@@ -104,7 +106,8 @@ ps<-ps %>%
          numeratordenom="N",
          indicator="TX_CURR_PS",
          DSP="PS",
-         source="Private Sector")
+         source="Private Sector") %>% 
+  left_join(psnu_agency,by="psnu")
 
 
 
@@ -146,7 +149,8 @@ cash<-cash %>%
          numeratordenom="N",
          indicator="TX_CURR_CASH",
          DSP="CASH",
-         source="Cash Paying")
+         source="Cash Paying") %>% 
+  left_join(psnu_agency,by="psnu")
 
 # DHIS -------------------------------------------------------------------------
 prioritization_dhis<-genie %>% 
@@ -202,7 +206,8 @@ dhis_22<-dhis_22 %>%
   mutate(psnu=case_when(
     psnu=="fs Thabo Mofutsanyana District Municipality" ~ "fs Thabo Mofutsanyane District Municipality",
     TRUE ~ psnu)) %>% 
-  left_join(prioritization_dhis,by="psnu") 
+  left_join(prioritization_dhis,by="psnu") %>% 
+  left_join(psnu_agency,by="psnu")
   
   
   
@@ -228,7 +233,8 @@ doh_t<-read_excel(here("Data", "Targets program.xlsx")) %>%
          period="FY23",
          period_type="targets",
          numeratordenom="N",
-         source="NDoH")
+         source="NDoH") %>% 
+  left_join(psnu_agency,by="psnu")
   
   
 
@@ -253,7 +259,7 @@ df_final<-bind_rows(df_epi,ps,cash,doh_t) %>%
   
 
 # EXPORT
-filename<-paste(Sys.Date(),"Naomi_MER_DHIS_NDoH","indicator_age_v1.5.txt",sep="_")
+filename<-paste(Sys.Date(),"Naomi_MER_DHIS_NDoH","indicator_age_v1.6.txt",sep="_")
 
 write_tsv(df_final, file.path(here("Dataout"),filename,na=""))
 
