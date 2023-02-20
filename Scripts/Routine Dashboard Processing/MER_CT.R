@@ -2,16 +2,23 @@ library(tidyverse)
 library(readxl)
 library(gophr)
 library(here)
+library(janitor)
 library(glamr)
 
-memory.limit(size=500000)
+# devtools::install_github("USAID-OHA-SI/glamr")
 
 
-current_pd<-"FY22Q4i" #change each time to refelct current period
+current_pd<-"FY23Q1i" #change each time to refelct current period
 
 # READ IN FILES ----------------------------------------------------------------
 ind_ref<-pull(read_excel(here("Data", "indicator_ref.xlsx"),
               sheet="TX"))
+
+
+disaggs<-read_excel(here("Data","Dimension_DataElements_DATIMGenie_TopLevelDisaggregate.xlsx")) %>% 
+  clean_names() %>% 
+  select(-data_element_source) %>% 
+  unite(disagg_key,indicator,numerator_denominator,standardized_disaggregate,remove=TRUE)
 
 
 #genie 
@@ -55,9 +62,21 @@ dsp_lookback<-read_excel(here("Data","dsp_attributes_2022-05-17.xlsx")) %>%
   rename(agency_lookback=`Agency lookback`) %>% 
   select(-MechanismID)
 
+# TB ART QUARTERLY -------------------------------------------------------------
+tb_files<-list.files(here("Data/TB_ART"),pattern="TB")
+
+tb<-here("Data/TB_ART",tb_files) %>%
+  map(read_tsv) %>%
+  reduce(bind_rows) %>% 
+  select(-dataElementName,-attributeOptionCombo) %>% 
+  mutate(indicator="TB_ART_NDOH_QUARTERLY",
+         mech_code=as.character(mech_code))
+
+
 
 # CONTEXT MERGE ----------------------------------------------------------------
 final<-final %>% 
+  # bind_rows(tb) %>% 
   mutate(short_name=psnu,
          short_name=str_replace_all(short_name, "District Municipality","DM"),
          short_name=str_replace_all(short_name, "Metropolitan Municipality", "MM")) %>% 
@@ -95,7 +114,10 @@ final<-final %>%
     mech_code=="17207" ~ "WRHI KP",
     mech_code=="17038" ~ "WRHI TB/HIV",
     mech_code=="17028" ~ "WRHI Prioity Populations",
-    TRUE ~ prime_partner_name))
+    TRUE ~ prime_partner_name)) %>% 
+  unite(disagg_key,indicator,numeratordenom,standardizeddisaggregate,remove=FALSE) %>% 
+  left_join(disaggs,by="disagg_key") %>% 
+  select(-disagg_key)
   
 
 # sense check
@@ -104,7 +126,8 @@ data_check<-final %>%
          indicator =="TX_CURR",
          DSP=="Yes",
          period_type %in% c("results"),
-         period %in% c("FY22Q1","FY22Q2","FY22Q3","FY22Q4")) %>% 
+         period %in% c("FY22Q1","FY22Q2","FY22Q3","FY22Q4",
+                       "FY23Q1")) %>% 
   group_by(funding_agency,indicator,period) %>% 
   summarize_at(vars(value),sum,na.rm=TRUE) %>% 
   ungroup() %>% 
@@ -117,7 +140,7 @@ print(data_check)
   
 # Dataout ----------------------------------------------------------------------
 
-filename<-paste(Sys.Date(),"MER_CTX",current_pd,"attributes_fy15-22.txt",sep="_")
+filename<-paste(Sys.Date(),"MER_CTX",current_pd,"attributes_fy15-23.txt",sep="_")
 
 write_tsv(final, file.path(here("Dataout"),filename,na=""))
 
