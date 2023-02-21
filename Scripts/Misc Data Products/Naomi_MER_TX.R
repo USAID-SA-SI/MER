@@ -13,25 +13,30 @@ psnu_agency<-read_excel(here("Data", "psnu_agency_ref.xlsx"))
 
 
 # get PLHIV from Sept 2021 Naomi | Adopted by estimates TWG---------------------
-epi_path<-here("Data/Naomi_2021","pepfar_datapack_indicators_2022.csv")
+epi_path<-here("Data/Naomi_2022","pepfar_datapack_indicators_2023.csv")
 
 df_epi<-read_csv(epi_path) %>% 
   filter(!indicator_code=="TX_CURR_SUBNAT.R") %>% 
   mutate(age=str_remove_all(age,"="),
          age=str_remove_all(age,'"')) %>% 
-  select(psnu_uid,psnu,indicator_code,age,sex,value) %>% 
+  select(psnu_uid,psnu,indicator_code,age,sex,value,calendar_quarter) %>% 
   rename(indicator=indicator_code,
          psnuuid=psnu_uid,
          ageasentered=age) %>% 
-  mutate(period="FY22",
+  mutate(period=case_when(
+    calendar_quarter=="CY2023Q3" ~ "FY23",
+    calendar_quarter=="CY2024Q3" ~ "FY24",
+    calendar_quarter=="CY2025Q3" ~ "FY25",
+    TRUE ~ ""),
          period_type="cumulative",
          source="NAOMI") %>% 
-  left_join(psnu_agency,by="psnu")
+  left_join(psnu_agency,by="psnu") %>% 
+  select(-calendar_quarter)
 
 
 
 #genie -------------------------------------------------------------------------
-genie_files<-list.files(here("Data"),pattern="Daily")
+genie_files<-list.files(here("Data"),pattern="Structured") #using MSD to get FY21
 
 
 genie<-here("Data",genie_files) %>% 
@@ -156,13 +161,13 @@ cash<-cash %>%
 prioritization_dhis<-genie %>% 
   distinct(snuprioritization,psnu,psnuuid)
 
-dhis_22<-read_excel(here("Data/dhis/2022", "webDHIS ZA OU5 CDC dataset update v1Nov2022.xlsx")) %>% 
+dhis_22<-read_excel(here("Data/dhis/2022", "webDHIS ZA OU5 CDC Dec 2022.xlsx")) %>% 
   setNames(., c('national',
                 'province',
                 'psnu',
                 'community',
-                'code',
                 'facility',
+                'code',
                 'indicator_id',
                 'indicator',
                 format(as.Date(as.numeric(names(.)[9:26]), 
@@ -172,8 +177,8 @@ dhis_22<-dhis_22 %>%
   filter(indicator %in% c("ART adult remain on ART end of period",
                           "ART child under 15 years remain on ART end of period",
                           "ART client remain on ART end of month - sum")) %>%
-  gather(mon_yr,value,"06-2021":"11-2022") %>% 
-  filter(mon_yr %in% c("09-2022")) %>% 
+  gather(mon_yr,value,"07-2021":"12-2022") %>% 
+  filter(mon_yr %in% c("09-2022", "12-2022")) %>% 
   mutate(mon_yr=my(mon_yr)) %>% 
   mutate(period=quarter(mon_yr, with_year = TRUE, fiscal_start = 10),
          period=stringr::str_remove(period, "20"),
@@ -196,8 +201,7 @@ dhis_22<-dhis_22 %>%
            indicator=="ART adult remain on ART end of period" ~ "15+",
            TRUE ~ ""
          ),
-         indicator="TX_CURR_90",
-         period="FY22") %>% 
+         indicator="TX_CURR_90") %>% 
   rename(snu1=province) %>% 
   select(-code,-indicator_id,-mon_yr,-national,-community,-facility) %>% 
   group_by_if(is.character) %>% 
@@ -254,12 +258,12 @@ df_final<-bind_rows(df_epi,ps,cash,doh_t) %>%
   summarize_at(vars(value),sum,na.rm=TRUE) %>% 
   mutate(indicator2=indicator,
          value2=value) %>% 
-  spread(indicator2,value2) 
+  spread(indicator2,value2)
 
   
 
 # EXPORT
-filename<-paste(Sys.Date(),"Naomi_MER_DHIS_NDoH","indicator_age_v1.6.txt",sep="_")
+filename<-paste(Sys.Date(),"COP23Analytics_Naomi_MER_DHIS_NDoH","indicator_age_v1.0.txt",sep="_")
 
 write_tsv(df_final, file.path(here("Dataout"),filename,na=""))
 
