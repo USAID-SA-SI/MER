@@ -8,7 +8,7 @@ library(glamr)
 # devtools::install_github("USAID-OHA-SI/glamr")
 
 
-current_pd<-"FY23Q1i" #change each time to refelct current period
+current_pd<-"FY223i" #change each time to refelct current period
 
 # READ IN FILES ----------------------------------------------------------------
 ind_ref<-pull(read_excel(here("Data", "indicator_ref.xlsx"),
@@ -22,10 +22,10 @@ disaggs<-read_excel(here("Data","Dimension_DataElements_DATIMGenie_TopLevelDisag
 
 
 #genie 
-genie_files<-list.files(here("Data"),pattern="Daily")
+genie_files<-list.files(here("Data/site"),pattern="Daily")
 
 
-genie<-here("Data",genie_files) %>% 
+genie<-here("Data/site",genie_files) %>% 
   map(read_msd, save_rds=FALSE, remove_txt = FALSE) %>% 
   reduce(rbind) %>%
   filter(fiscal_year %in% c("2022","2023"))
@@ -33,18 +33,18 @@ genie<-here("Data",genie_files) %>%
 print(distinct(genie,fiscal_year))
 
 
-#MSD
-msd_files<-list.files(here("Data"),pattern="Frozen")
 
-msd<-here("Data",msd_files) %>%
+#MSD
+msd_files<-list.files(here("Data/site"),pattern="Structured")
+
+msd<-here("Data/site",msd_files) %>%
   map(read_msd, save_rds=FALSE, remove_txt = FALSE) %>%
   reduce(rbind)
 
 
 #subset & merge ----------------------------------------------------------------
 msd<-msd %>%
-  filter(fiscal_year %in% c("2015","2016",
-                            "2017", "2018","2019","2020","2021"))
+  filter(fiscal_year %in% c("2020","2021"))
 
 print(distinct(msd,fiscal_year))
 
@@ -62,21 +62,21 @@ dsp_lookback<-read_excel(here("Data","dsp_attributes_2022-05-17.xlsx")) %>%
   rename(agency_lookback=`Agency lookback`) %>% 
   select(-MechanismID)
 
-# TB ART QUARTERLY -------------------------------------------------------------
-tb_files<-list.files(here("Data/TB_ART"),pattern="TB")
 
-tb<-here("Data/TB_ART",tb_files) %>%
-  map(read_tsv) %>%
-  reduce(bind_rows) %>% 
-  select(-dataElementName,-attributeOptionCombo) %>% 
-  mutate(indicator="TB_ART_NDOH_QUARTERLY",
-         mech_code=as.character(mech_code))
+site_att<-read_tsv(here("Data/site_att", "2023_02_03_site_attributes.txt")) %>% 
+  rename(orgunituid=orgunit_uid)
 
+
+doh_att<-read_csv(here("Data/site_att", "vwOrgunitStructureOU5.csv")) %>% 
+  clean_names() %>% 
+  select(ou5name,org_unit_ownership,
+         org_unit_rural_urban,
+         org_unit_type) %>% 
+  rename(facility=ou5name)
 
 
 # CONTEXT MERGE ----------------------------------------------------------------
 final<-final %>% 
-  # bind_rows(tb) %>% 
   mutate(short_name=psnu,
          short_name=str_replace_all(short_name, "District Municipality","DM"),
          short_name=str_replace_all(short_name, "Metropolitan Municipality", "MM")) %>% 
@@ -94,6 +94,8 @@ final<-final %>%
                              "1 - Scale-Up: Saturation") ~ "YES",
     TRUE ~ "NO"
   ))
+
+
 
 
 # transform --------------------------------------------------------------------
@@ -117,7 +119,9 @@ final<-final %>%
     TRUE ~ prime_partner_name)) %>% 
   unite(disagg_key,indicator,numeratordenom,standardizeddisaggregate,remove=FALSE) %>% 
   left_join(disaggs,by="disagg_key") %>% 
-  select(-disagg_key)
+  select(-disagg_key) %>% 
+  left_join(site_att,by="orgunituid") %>% 
+  left_join(doh_att,by="facility")
   
 
 # sense check
@@ -140,7 +144,7 @@ print(data_check)
   
 # Dataout ----------------------------------------------------------------------
 
-filename<-paste(Sys.Date(),"MER_CTX",current_pd,"attributes_fy15-23.txt",sep="_")
+filename<-paste(Sys.Date(),"MER_CTX",current_pd,"site_level_fy20-23.txt",sep="_")
 
 write_tsv(final, file.path(here("Dataout"),filename,na=""))
 

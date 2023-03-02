@@ -4,9 +4,9 @@ library(gophr)
 library(here)
 library(glamr)
 
-memory.limit(size=500000)
 
-current_pd<-"FY22Q4i" #change each period
+
+current_pd<-"FY23Q1i" #change each period
 
 
 # READ IN FILES ----------------------------------------------------------------
@@ -84,8 +84,13 @@ final<-final %>%
     dreams=="Y" & psnu =="kz eThekwini Metropolitan Municipality" ~ "original DREAMS district",
     dreams=="Y" & psnu == "kz uMgungundlovu District Municipality" ~ "original DREAMS district",
     dreams == "Y" ~ "DREAMS expansion district",
-    TRUE ~ "not a DREAMS district"))
-
+    TRUE ~ "not a DREAMS district"),
+  mech_code=case_when(
+    fiscal_year=="2023" & mech_code=="86131" ~ "82199",
+    fiscal_year=="2023" & mech_code=="86132" ~ "82199",
+    TRUE ~ mech_code
+  )) %>% #temp target fix until OPU
+  rename_official()
 
 # transform --------------------------------------------------------------------
 final<-final %>% 
@@ -104,3 +109,4 @@ final<-final %>%
 filename<-paste(Sys.Date(),"MER_Prevention",current_pd,"attributes.txt",sep="_")
 
 write_tsv(final, file.path(here("Dataout"),filename,na=""))
+
