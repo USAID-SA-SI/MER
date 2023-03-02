@@ -15,8 +15,7 @@ current_q<-"FY22Q4"
 # HRID ---- MUST BE XLSX, NOT XLSB
 HRID_file<-list.files(here("Data"),pattern="Factview")
 
-hrid<-read_excel(here("Data",HRID_file)) %>%  rename(DSP_current_FV=DSP_current,DSP_FV=DSP)
-
+hrid<-read_excel(here("Data",HRID_file))
 
 
 # MUNGE ----------------------------------------------------------------
@@ -114,7 +113,7 @@ final<-final %>%
   mutate(indicator2=indicator,
          value2=value) %>% 
   spread(indicator2,value2) %>% 
-  left_join(dsp_lookback,by="DSPID") %>%  select(-prioritization,-chw_like,-high_burden) 
+  left_join(dsp_lookback,by="DSPID") 
 
 
 
