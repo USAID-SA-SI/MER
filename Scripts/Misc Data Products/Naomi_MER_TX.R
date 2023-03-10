@@ -214,7 +214,12 @@ dhis_22<-dhis_22 %>%
   left_join(psnu_agency,by="psnu")
   
   
-  
+#Hierarchy for NDoH Short Names
+hierarchy_short<-hierarchy %>% 
+  mutate(short_name=psnu_join,
+       short_name=str_remove_all(short_name, " District Municipality"),
+      short_name=str_remove_all(short_name, " Metropolitan Municipality"))
+
 
 #NDOH TARGETS
 doh_t<-read_excel(here("Data", "Targets program.xlsx")) %>% 
@@ -239,6 +244,39 @@ doh_t<-read_excel(here("Data", "Targets program.xlsx")) %>%
          numeratordenom="N",
          source="NDoH") %>% 
   left_join(psnu_agency,by="psnu")
+
+
+doh_t_new<-read_excel(here("Data", "FY2223_Draft Targets.xlsx"),
+                      skip=1) %>% 
+  setNames(., c('psnu',
+                'TX_CURR_90-15+-FY24',
+                'TX_CURR_90-<15-FY24',
+                'TX_CURR_90-15+-FY25',
+                'TX_CURR_90-<15-FY25',
+                'TX_CURR_90-15+-FY26',
+                'TX_CURR_90-<15-FY26',
+                'TX_NEW-15+-FY24',
+                'TX_NEW-<15-FY24',
+                'TX_NEW-15+-FY25',
+                'TX_NEW-< 15-FY25',
+                'TX_NEW-15+-FY26',
+                'TX_NEW-<15+-FY26')) %>% 
+  gather(indicator,value,'TX_CURR_90-15+-FY24':'TX_NEW-<15+-FY26') %>% 
+  separate(indicator,into=c("indicator","ageasentered","period"),sep="-") %>% 
+  mutate(psnu=case_when(
+    psnu=="Thabo Mofutsanyana" ~ "Thabo Mofutsanyane",
+    TRUE ~ psnu)) %>% 
+  mutate(short_name=psnu) %>% 
+  left_join(hierarchy_short, by="short_name") %>% 
+  filter(!is.na(psnuuid)) %>% 
+  select(-psnu.x,-short_name,-psnu_join) %>% 
+  rename(psnu=psnu.y) %>% 
+  mutate(standardizeddisaggregate="Total Numerator",
+         period_type="targets",
+         numeratordenom="N",
+         source="NDoH") %>% 
+  left_join(psnu_agency,by="psnu") %>% 
+  mutate(trendscoarse=ageasentered)
   
   
 
@@ -249,7 +287,7 @@ df_final<-bind_rows(df_epi,ps,cash,doh_t) %>%
     ageasentered %in% c("0-14","<01","01-04","05-09","10-14") ~ "<15",
     ageasentered %in% c("15-19","20-24","25-29","30-34","35-39","40-44",
                         "45-49","50-54","55-59","60-64","65+","25+","15-24")~ "15+")) %>% 
-  bind_rows(df_genie,dhis_22) %>% 
+  bind_rows(df_genie,dhis_22,doh_t_new) %>% 
   mutate(short_name=psnu,
          short_name=str_replace_all(short_name, "District Municipality","DM"),
          short_name=str_replace_all(short_name, "Metropolitan Municipality", "MM")) %>% 
