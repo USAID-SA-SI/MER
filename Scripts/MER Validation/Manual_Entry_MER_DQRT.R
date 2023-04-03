@@ -81,7 +81,7 @@ check_1_2 <- df_validation %>%
          today_date = lubridate::today(),
          type_check = "Result in previous quarter") %>%
   filter(!is.na(check)) %>% 
-  select(prime_partner_name, sitename, level, `FY22Q4`, `FY23Q1`, today_date, indicator, type_check, check) 
+  select(mech_code, prime_partner_name, level, today_date, type_check, period, check, psnu, sitename)
 
 
 # LEVEL 2 CHECKS ------------------------------------------
@@ -300,4 +300,33 @@ check_2_8 <- df_hts  %>%
   filter(!is.na(check)) %>%
   select(mech_code, prime_partner_name, level, today_date, type_check, period, check, psnu, sitename)
 
+# CONSOLIDATE CHECKS ---------------------------------------------------------
+
+level1_checks <- bind_rows(
+  check_1_1,
+  check_1_2) %>% 
+  select(mech_code, prime_partner_name, level, today_date, type_check, period, check, psnu, sitename)
+
+level2_checks <- bind_rows(
+  check_2_1,
+  check_2_2,
+ # check_2_3,
+ # check_2_4,
+  check_2_5,
+  check_2_6,
+  check_2_7
+ #,
+  #check_2_8
+ ) %>% 
+  select(mech_code, prime_partner_name, level, today_date, type_check, period, check, psnu, sitename)
+
+
+Master_DQRT <- openxlsx::loadWorkbook("MER Manual Entry checks/MASTER MER DQRT Tracker.xlsx") 
+
+
+openxlsx::writeData(Master_DQRT, sheet = "Level1", x = level1_checks, 
+                    colNames=T, withFilter=T)
+openxlsx::writeData(Master_DQRT, sheet = "Level2", x = level2_checks, 
+                    colNames=T, withFilter=T)
+openxlsx::saveWorkbook(Master_DQRT, "MER Manual Entry checks/MASTER MER DQRT Tracker.xlsx", overwrite = TRUE)       
 
