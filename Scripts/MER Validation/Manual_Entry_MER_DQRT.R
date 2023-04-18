@@ -3,22 +3,13 @@
 # REF ID:   df2e3b9f 
 # LICENSE:  MIT
 # DATE:     2023-03-30
-# UPDATED: 
+# UPDATED:  2023-04-18
 
 # DEPENDENCIES ------------------------------------------------------------
 
 library(glamr)
 library(tidyverse)
-library(glitr)
 library(gophr)
-library(extrafont)
-library(scales)
-library(tidytext)
-library(patchwork)
-library(ggtext)
-library(glue)
-library(readxl)
-library(googlesheets4)
 
 # GLOBAL VARIABLES --------------------------------------------------------
 
@@ -29,11 +20,16 @@ file_path <- genie_folderpath %>%
 
 # IMPORT ------------------------------------------------------------------
 
-df_msd <- read_msd(file_path)
+df_msd <- read_psd(file_path)
 
-get_metadata(file_path)
+curr_fy <- 2023
+curr_fy_lab <- "FY23"
 
-prev_fy <- metadata$curr_fy - 1
+curr_pd <- "FY23Q1" #change this
+prev_fy <- 2022
+
+# get_metadata(file_path)
+# prev_fy <- metadata$curr_fy - 1
 
 # MUNGE -------------------------------------------------------------------
 
@@ -58,16 +54,18 @@ df_target_result <- df_msd %>%
 
 # LEVEL 1 CHECKS -------------------------------------------------------
 
-#1.1: Targets vs. Results if result is blank
-  #OVC_SERV, OVC_HIVSTAT, PrEP_CT, HTS_INDEX, HTS_RECENT, HTS_TST
+#1.1: Targets vs. Results if result is blank (NOTE: THIS IS USING CUMULATIVE)
 
 check_1_1 <- df_target_result %>% 
+#  reshape_msd() %>% view()
+  filter(fiscal_year == curr_fy) %>%
   mutate(check = ifelse(targets > 0 & cumulative == 0, "Targets reported but results blank", NA),
          level = "Level 1",
          today_date = lubridate::today(),
+         period = curr_pd,
          type_check = "Result in previous quarter") %>%
-  filter(!is.na(check)) %>% 
-  select(mech_code, prime_partner_name, level, today_date, type_check, period, check, psnu, sitename)
+  filter(!is.na(check)) %>%
+  select(mech_code, prime_partner_name, level, today_date, type_check, period, indicator, check, psnu, sitename)
 
 
 
@@ -76,7 +74,7 @@ check_1_1 <- df_target_result %>%
 check_1_2 <- df_validation %>% 
   reshape_msd() %>% 
   pivot_wider(names_from = "period") %>% 
-  mutate(check = ifelse(`FY22Q4` > 0 & `FY23Q1` == 0, "Value reported in previous quarter but missing in this quarter", NA),
+  mutate(check = ifelse(`FY22Q4` > 0 & `FY23Q1` == 0 | is.na(`FY23Q1`), "Value reported in previous quarter but missing in this quarter", NA),
          level = "Level 1",
          today_date = lubridate::today(),
          type_check = "Result in previous quarter") %>%
@@ -91,7 +89,7 @@ check_1_2 <- df_validation %>%
 df_ovc_grad <- df_msd %>% 
   filter(indicator %in% c("OVC_SERV"),
          funding_agency == "USAID",
-         fiscal_year == 2022,
+         fiscal_year == prev_fy,
          #trendscoarse == "<18",
          standardizeddisaggregate %in% c("Total Numerator","ProgramStatus"),
          otherdisaggregate %in% c(NA, "Exited without Graduation")) %>% 
@@ -110,17 +108,13 @@ check_2_1 <- df_ovc_grad %>%
   filter(!is.na(check)) %>% 
   select(mech_code, prime_partner_name, level, today_date, type_check, period, check, psnu, sitename)
 
-  
-  
-
-
 
 # 2.2: OVC_HIVSTAT < OVC_SERV under 18 program status
 
 df_ovc_hivstat <- df_msd %>% 
   filter(indicator %in% c("OVC_HIVSTAT"),
          funding_agency == "USAID",
-         fiscal_year == 2022,
+         fiscal_year == prev_fy,
          standardizeddisaggregate %in% c("Total Numerator")) %>% 
   group_by(prime_partner_name,mech_code , snu1, psnu, sitename, facilityuid, indicator, fiscal_year) %>% 
   summarise(across(starts_with("qtr"), sum, na.rm = TRUE), .groups = "drop")
@@ -128,7 +122,7 @@ df_ovc_hivstat <- df_msd %>%
 df_ovc_serv_u18 <- df_msd %>% 
   filter(indicator %in% c("OVC_SERV"),
          funding_agency == "USAID",
-         fiscal_year == 2022,
+         fiscal_year == prev_fy,
          trendscoarse == "<18",
          standardizeddisaggregate %in% c("Age/Sex/ProgramStatus")) %>% 
   group_by(prime_partner_name,mech_code , snu1, psnu, sitename, facilityuid, indicator, fiscal_year) %>% 
@@ -179,7 +173,7 @@ df_prep_test <- df_msd %>%
 
 check_2_4 <- df_prep_test %>% 
   reshape_msd() %>% 
-  filter(period == metadata$curr_pd) %>% 
+  filter(period == curr_pd) %>% 
   pivot_wider(names_from = "standardizeddisaggregate", values_from = "value") %>% 
   mutate(check = ifelse(`Total Numerator` < `TestResult`, "PrEP_CT<PrEP_CT TestResult Disagg", NA),
          level = "Level 2",
@@ -196,14 +190,14 @@ check_2_4 <- df_prep_test %>%
 df_index <- df_msd %>% 
   filter(indicator %in% c("HTS_INDEX"),
          funding_agency == "USAID",
-         fiscal_year %in% c(2023)) %>%
+         fiscal_year %in% c(curr_fy)) %>%
   filter(standardizeddisaggregate %in% c("1:Age/Sex/IndexCasesOffered","2:Age/Sex/IndexCasesAccepted")) %>% 
   group_by(prime_partner_name,mech_code , snu1, psnu, sitename, facilityuid, indicator, standardizeddisaggregate, fiscal_year) %>% 
   summarise(across(starts_with("qtr"), sum, na.rm = TRUE), .groups = "drop")
 
 check_2_5 <- df_index %>% 
   reshape_msd() %>% 
-  filter(period == metadata$curr_pd) %>% 
+  filter(period == curr_pd) %>% 
   pivot_wider(names_from = "standardizeddisaggregate", values_from = "value") %>%
   mutate(check = ifelse(`1:Age/Sex/IndexCasesOffered` < `2:Age/Sex/IndexCasesAccepted`, "Index_offered<Index_accepted", NA),
          level = "Level 2",
@@ -224,7 +218,7 @@ df_hts_contacts <- df_msd %>%
 
 check_2_6 <- df_hts_contacts %>% 
   reshape_msd() %>% 
-  filter(period == metadata$curr_pd) %>% 
+  filter(period == curr_pd) %>% 
   mutate(disagg_name = glue("{otherdisaggregate}_{statushiv}")) %>% 
   mutate(disagg_name = recode(disagg_name, "NA_NA" = "Total Contacts",
                               "NA_Negative" = "Negatives")) %>% 
@@ -258,7 +252,7 @@ HTS_TST_POS_15plus <- df_msd %>%
 
 HTS_RECENT <- df_msd %>% 
   filter(indicator %in% c("HTS_RECENT"),
-         fiscal_year %in% c(2022, 2023)) %>% 
+         fiscal_year %in% c(prev_fy, curr_fy)) %>% 
   group_by(prime_partner_name,mech_code , snu1, psnu, sitename, facilityuid, indicator, fiscal_year) %>% 
   summarise(across(starts_with("qtr"), sum, na.rm = TRUE), .groups = "drop")
 
@@ -267,7 +261,7 @@ check_2_7 <- bind_rows(HTS_TST_POS_15plus, HTS_RECENT) %>%
   group_by(prime_partner_name,mech_code , snu1, psnu, sitename, facilityuid, indicator, fiscal_year) %>% 
   summarise(across(starts_with("qtr"), sum, na.rm = TRUE), .groups = "drop") %>% 
   reshape_msd() %>%   
-  filter(period == metadata$curr_pd) %>% 
+  filter(period == curr_pd) %>% 
   pivot_wider(names_from = "indicator", values_from = "value") %>%
   mutate(check = ifelse(`HTS_TST` >= `HTS_RECENT`, "HTS_TST_POS (>=15) >=HTS_RECENT", NA),
          level = "Level 2",
@@ -281,7 +275,7 @@ check_2_7 <- bind_rows(HTS_TST_POS_15plus, HTS_RECENT) %>%
 
 df_hts <- df_msd %>% 
   filter(funding_agency == "USAID",
-         fiscal_year %in% c(2022, 2023),
+         fiscal_year %in% c(prev_fy, curr_fy),
          indicator %in% c("HTS_TST", "HTS_TST_POS"),
          standardizeddisaggregate == "Total Numerator") %>% 
   group_by(snu1, psnu, sitename, facilityuid, prime_partner_name, mech_code, funding_agency,
@@ -290,7 +284,7 @@ df_hts <- df_msd %>%
 
 check_2_8 <- df_hts  %>%  
   reshape_msd() %>% 
-  filter(period == metadata$curr_pd) %>% 
+  filter(period == curr_pd) %>% 
   pivot_wider(names_from = "indicator", values_from = "value") %>% 
   # rename()
   mutate(check = ifelse(`HTS_TST` < `HTS_TST_POS`, "HTS_TST < HTS_TST_POS", NA),
