@@ -3,20 +3,22 @@
 # REF ID:   df2e3b9f 
 # LICENSE:  MIT
 # DATE:     2023-03-30
-# UPDATED:  2023-04-18
+# UPDATED:  2023-04-24
 
 # DEPENDENCIES ------------------------------------------------------------
 
 library(glamr)
 library(tidyverse)
 library(gophr)
+library(glue)
+library(openxlsx)
 
 # GLOBAL VARIABLES --------------------------------------------------------
 
 genie_folderpath <- "data-raw/MSD-Genie"
 
 file_path <- genie_folderpath %>% 
-  return_latest("Genie-SiteByIMs-South-Africa-Daily-2023-03-31_v2") 
+  return_latest("Genie-SiteByIMs-South-Africa-Daily-2023-04-24") 
 
 # IMPORT ------------------------------------------------------------------
 
@@ -25,7 +27,7 @@ df_msd <- read_psd(file_path)
 curr_fy <- 2023
 curr_fy_lab <- "FY23"
 
-curr_pd <- "FY23Q1" #change this
+curr_pd <- "FY23Q2" #change this
 prev_fy <- 2022
 
 # get_metadata(file_path)
@@ -36,7 +38,7 @@ prev_fy <- 2022
 #will take a WHILE to run
 df_validation <- df_msd %>% 
   filter(funding_agency == "USAID",
-         fiscal_year %in% c(prev_fy, metadata$curr_fy),
+         fiscal_year %in% c(curr_fy),
          standardizeddisaggregate == "Total Numerator") %>% 
   group_by(snu1, psnu, sitename, facilityuid, prime_partner_name, mech_code, funding_agency,
            indicator,fiscal_year, standardizeddisaggregate) %>% 
@@ -45,7 +47,7 @@ df_validation <- df_msd %>%
 #will take a WHILE to run (check on reporting pd to ensure check is looking where you need)
 df_target_result <- df_msd %>% 
   filter(funding_agency == "USAID",
-         fiscal_year %in% c(prev_fy, metadata$curr_fy),
+         fiscal_year %in% c(curr_fy),
          standardizeddisaggregate == "Total Numerator") %>% 
   group_by(snu1, psnu, sitename, facilityuid, prime_partner_name, mech_code, funding_agency,
            indicator,fiscal_year, standardizeddisaggregate) %>% 
@@ -74,12 +76,13 @@ check_1_1 <- df_target_result %>%
 check_1_2 <- df_validation %>% 
   reshape_msd() %>% 
   pivot_wider(names_from = "period") %>% 
-  mutate(check = ifelse(`FY22Q4` > 0 & `FY23Q1` == 0 | is.na(`FY23Q1`), "Value reported in previous quarter but missing in this quarter", NA),
+  mutate(check = ifelse(`FY23Q1` > 0 & `FY23Q2` == 0 | is.na(`FY23Q2`), "Value reported in previous quarter but missing in this quarter", NA),
          level = "Level 1",
          today_date = lubridate::today(),
          type_check = "Result in previous quarter") %>%
   filter(!is.na(check)) %>% 
-  select(mech_code, prime_partner_name, level, today_date, type_check, period, check, psnu, sitename)
+  mutate(period = curr_pd) %>% 
+  select(mech_code, prime_partner_name, level, today_date, type_check, period, indicator, check, psnu, sitename)
 
 
 # LEVEL 2 CHECKS ------------------------------------------
@@ -89,13 +92,14 @@ check_1_2 <- df_validation %>%
 df_ovc_grad <- df_msd %>% 
   filter(indicator %in% c("OVC_SERV"),
          funding_agency == "USAID",
-         fiscal_year == prev_fy,
+         fiscal_year == curr_fy,
          #trendscoarse == "<18",
          standardizeddisaggregate %in% c("Total Numerator","ProgramStatus"),
          otherdisaggregate %in% c(NA, "Exited without Graduation")) %>% 
   group_by(prime_partner_name,mech_code , snu1, psnu, sitename, facilityuid, indicator, standardizeddisaggregate, fiscal_year) %>% 
   summarise(across(starts_with("qtr"), sum, na.rm = TRUE), .groups = "drop")
 
+#if you get an error, most likely that OVC Q2 results are not in DATIM yet
 check_2_1 <- df_ovc_grad %>% 
   reshape_msd() %>% 
   filter(period == max(period)) %>% 
@@ -114,7 +118,7 @@ check_2_1 <- df_ovc_grad %>%
 df_ovc_hivstat <- df_msd %>% 
   filter(indicator %in% c("OVC_HIVSTAT"),
          funding_agency == "USAID",
-         fiscal_year == prev_fy,
+         fiscal_year == curr_fy,
          standardizeddisaggregate %in% c("Total Numerator")) %>% 
   group_by(prime_partner_name,mech_code , snu1, psnu, sitename, facilityuid, indicator, fiscal_year) %>% 
   summarise(across(starts_with("qtr"), sum, na.rm = TRUE), .groups = "drop")
@@ -122,12 +126,13 @@ df_ovc_hivstat <- df_msd %>%
 df_ovc_serv_u18 <- df_msd %>% 
   filter(indicator %in% c("OVC_SERV"),
          funding_agency == "USAID",
-         fiscal_year == prev_fy,
+         fiscal_year == curr_fy,
          trendscoarse == "<18",
          standardizeddisaggregate %in% c("Age/Sex/ProgramStatus")) %>% 
   group_by(prime_partner_name,mech_code , snu1, psnu, sitename, facilityuid, indicator, fiscal_year) %>% 
   summarise(across(starts_with("qtr"), sum, na.rm = TRUE), .groups = "drop")
 
+#if you get an error, most likely that OVC Q2 results are not in DATIM yet
 check_2_2 <- df_ovc_hivstat %>% 
   bind_rows(df_ovc_serv_u18) %>% 
   reshape_msd() %>% 
@@ -151,9 +156,10 @@ df_prep_kp <- df_msd %>%
   group_by(prime_partner_name,mech_code , snu1, psnu, sitename, facilityuid, indicator, standardizeddisaggregate, fiscal_year) %>% 
   summarise(across(starts_with("qtr"), sum, na.rm = TRUE), .groups = "drop") 
 
+#if errors flagged, results are probably not in DATIM
 check_2_3 <- df_prep_kp %>% 
   reshape_msd() %>% 
-  filter(period == metadata$curr_pd) %>% 
+  filter(period == curr_pd) %>% 
   pivot_wider(names_from = "standardizeddisaggregate", values_from = "value") %>% 
   mutate(check = ifelse(`Total Numerator` < `KeyPop`, "PrEP_CT<PrEP_CT KeyPop Disagg", NA),
          level = "Level 2",
@@ -314,7 +320,7 @@ level2_checks <- bind_rows(
  ) %>% 
   select(mech_code, prime_partner_name, level, today_date, type_check, period, check, psnu, sitename)
 
-
+#write to an excel document ---------------------------------------------------------
 Master_DQRT <- openxlsx::loadWorkbook("MER Manual Entry checks/MASTER MER DQRT Tracker.xlsx") 
 
 
@@ -324,3 +330,7 @@ openxlsx::writeData(Master_DQRT, sheet = "Level2", x = level2_checks,
                     colNames=T, withFilter=T)
 openxlsx::saveWorkbook(Master_DQRT, "MER Manual Entry checks/MASTER MER DQRT Tracker.xlsx", overwrite = TRUE)       
 
+
+#if that doesnt work, do this and copy into the MER dqrt
+write_csv(level1_checks, "MER Manual Entry checks/MER_DQRT_FY23Q2_level1.csv")
+write_csv(level2_checks, "MER Manual Entry checks/MER_DQRT_FY23Q2_level2.csv")
