@@ -8,7 +8,7 @@ library(glamr)
 # devtools::install_github("USAID-OHA-SI/glamr")
 
 
-current_pd<-"FY223i" #change each time to refelct current period
+current_pd<-"FY23Q2i" #change each time to refelct current period
 
 # READ IN FILES ----------------------------------------------------------------
 ind_ref<-pull(read_excel(here("Data", "indicator_ref.xlsx"),
@@ -63,16 +63,18 @@ dsp_lookback<-read_excel(here("Data","dsp_attributes_2022-05-17.xlsx")) %>%
   select(-MechanismID)
 
 
-site_att<-read_tsv(here("Data/site_att", "2023_02_03_site_attributes.txt")) %>% 
-  rename(orgunituid=orgunit_uid)
+# site_att<-read_tsv(here("Data/site_att", "2023_02_03_site_attributes.txt")) %>% 
+#   rename(orgunituid=orgunit_uid)
+# 
+# 
+# doh_att<-read_csv(here("Data/site_att", "vwOrgunitStructureOU5.csv")) %>% 
+#   clean_names() %>% 
+#   select(ou5name,org_unit_ownership,
+#          org_unit_rural_urban,
+#          org_unit_type) %>% 
+#   rename(facility=ou5name)
 
-
-doh_att<-read_csv(here("Data/site_att", "vwOrgunitStructureOU5.csv")) %>% 
-  clean_names() %>% 
-  select(ou5name,org_unit_ownership,
-         org_unit_rural_urban,
-         org_unit_type) %>% 
-  rename(facility=ou5name)
+site_att_full<-read_tsv(here("Data/site_att", "2023-03-14_NDoH_DATIM_USAID_siteattributes.txt")) 
 
 
 # CONTEXT MERGE ----------------------------------------------------------------
@@ -119,9 +121,8 @@ final<-final %>%
     TRUE ~ prime_partner_name)) %>% 
   unite(disagg_key,indicator,numeratordenom,standardizeddisaggregate,remove=FALSE) %>% 
   left_join(disaggs,by="disagg_key") %>% 
-  select(-disagg_key) %>% 
-  left_join(site_att,by="orgunituid") %>% 
-  left_join(doh_att,by="facility")
+  select(-disagg_key)
+  # full_join(site_att_full,by="facility")
   
 
 # sense check
@@ -131,7 +132,7 @@ data_check<-final %>%
          DSP=="Yes",
          period_type %in% c("results"),
          period %in% c("FY22Q1","FY22Q2","FY22Q3","FY22Q4",
-                       "FY23Q1")) %>% 
+                       "FY23Q1","FY23Q2")) %>% 
   group_by(funding_agency,indicator,period) %>% 
   summarize_at(vars(value),sum,na.rm=TRUE) %>% 
   ungroup() %>% 
@@ -140,8 +141,6 @@ data_check<-final %>%
 
 print(data_check)
 
-
-  
 # Dataout ----------------------------------------------------------------------
 
 filename<-paste(Sys.Date(),"MER_CTX",current_pd,"site_level_fy20-23.txt",sep="_")
