@@ -9,7 +9,7 @@ setwd("C:/Users/ctrapence/Documents")
 
 
 # REFERENCE
-current_q<-"FY22Q4c"
+current_q<-"FY22Q4"
 
 
 # HRID ---- MUST BE XLSX, NOT XLSB
@@ -19,13 +19,8 @@ hrid<-read_excel(here("Data",HRID_file))
 
 
 # MUNGE ----------------------------------------------------------------
-<<<<<<< Updated upstream
 hrid2<-hrid %>%
   rename(mech_code=mechanism_id ,
-=======
-hrid<-hrid %>%
-  rename(mech_code=mechanism_id,
->>>>>>> Stashed changes
          mech_name=ImplementingMechanismName) %>% 
   mutate(mech_code=as.character(mech_code)) %>% 
   gather(period,value,FY2017Q2:FY2022Q4) %>% 
@@ -39,17 +34,10 @@ hrid<-hrid %>%
   mutate(short_name=psnu,
          short_name=str_replace_all(short_name, "District Municipality","DM"),
          short_name=str_replace_all(short_name, "Metropolitan Municipality", "MM")) %>% 
-<<<<<<< Updated upstream
  # rename(#occ_classification=disaggregate,
          #cadre=cadre,
          #service_delivery_model=occ_classification,
          #snuprioritization=prioritization) %>% 
-=======
-  rename(snuprioritization=psnu_priority) %>% 
-         # occ_classification=disaggregate,
-         # cadre=category_option_combo_name,
-         # service_delivery_model=other_disaggregate) 
->>>>>>> Stashed changes
   mutate(CHW_like = case_when(occ_classification=="Community Development Workers"& service_delivery_model=="Community-based" ~ "Yes",
                               occ_classification=="Community Development Workers"& service_delivery_model=="Facility site - Roving" ~ "Yes",
                               occ_classification=="Community Development Workers"& service_delivery_model=="Facility site - Seconded" ~ "Yes",

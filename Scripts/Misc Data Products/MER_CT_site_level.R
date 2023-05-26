@@ -7,18 +7,18 @@ library(glamr)
 memory.limit(size=500000)
 
 
-current_pd<-"FY23Q2i"
+current_pd<-"FY22Q2c"
 
 # READ IN FILES ----------------------------------------------------------------
-ind_ref<-pull(read_excel(here("Data", "indicator_ref_PLM_SRE.xlsx"),
+ind_ref<-pull(read_excel(here("Data", "indicator_ref.xlsx"),
               sheet="TX"))
 
 
 #genie 
-genie_files<-list.files(here("Data"),pattern="Structured") #using MSD
+genie_files<-list.files(here("Data"),pattern="SITE")
 
 genie<-here("Data",genie_files) %>% 
-  map(read_psd, save_rds=FALSE, remove_txt = FALSE) %>% 
+  map(read_msd, save_rds=FALSE, remove_txt = FALSE) %>% 
   reduce(rbind) %>%
 #   filter(fiscal_year %in% c("2021"))
 # 

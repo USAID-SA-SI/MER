@@ -5,13 +5,8 @@ library(here)
 library(glamr)
 
 
-#INSTALL OHA PACKAGE(S) IF NOT ALREADY INSTALLED
-# devtools::install_github("USAID-OHA-SI/gophr")
 
-
-#GLOBALS
-current_pd<-"FY23Q2i" #change each period
-load_secrets()
+current_pd<-"FY23Q1i" #change each period
 
 
 # READ IN FILES ----------------------------------------------------------------
@@ -32,7 +27,7 @@ print(distinct(genie,fiscal_year))
 
 
 #MSD
-msd_files<-list.files(here("Data"),pattern="Frozen") #changed to MSD for now
+msd_files<-list.files(here("Data"),pattern="Frozen")
 
 msd<-here("Data",msd_files) %>%
   map(read_msd, save_rds=FALSE, remove_txt = FALSE) %>%
