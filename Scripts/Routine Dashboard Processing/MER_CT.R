@@ -8,7 +8,7 @@ library(glamr)
 # devtools::install_github("USAID-OHA-SI/glamr")
 
 
-current_pd<-"FY23Q3i" #change each time to refelct current period
+current_pd<-"FY23Q3c" #change each time to refelct current period
 
 # READ IN FILES ----------------------------------------------------------------
 ind_ref<-pull(read_excel(here("Data", "indicator_ref.xlsx"),
@@ -26,8 +26,9 @@ genie_files<-list.files(here("Data"),pattern="Daily")
 
 
 genie<-here("Data",genie_files) %>% 
-  map(read_msd, save_rds=FALSE, remove_txt = FALSE) %>% 
-  reduce(rbind) 
+  map(read_psd, save_rds=FALSE, remove_txt = FALSE) %>% 
+  reduce(rbind) %>%
+  select(-c(prime_partner_uei, is_indigenous_prime_partner, use_for_age))
   #filter(fiscal_year %in% c("2022","2023"))
 
 print(distinct(genie,fiscal_year))
@@ -44,7 +45,8 @@ msd<-here("Data",msd_files) %>%
 #subset & merge ----------------------------------------------------------------
 msd<-msd %>%
   filter(fiscal_year %in% c("2015","2016",
-                            "2017", "2018","2019","2020","2021"))
+                            "2017", "2018","2019","2020","2021")) %>%
+  select(-c(disaggregate, prime_partner_uei ))
 
 print(distinct(msd,fiscal_year))
 
