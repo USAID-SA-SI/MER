@@ -8,7 +8,7 @@ library(glamr)
 # devtools::install_github("USAID-OHA-SI/glamr")
 
 
-current_pd<-"FY23Q3i" #change each time to reflect current period
+current_pd<-"FY23Q3c" #change each time to reflect current period
 
 # READ IN FILES ----------------------------------------------------------------
 ind_ref<-pull(read_excel(here("Data", "indicator_ref.xlsx"),
@@ -26,9 +26,10 @@ genie_files<-list.files(here("Data/site"),pattern="Daily")
 
 
 genie<-here("Data/site",genie_files) %>% 
-  map(read_msd, save_rds=FALSE, remove_txt = FALSE) %>% 
+  map(read_psd, save_rds=FALSE, remove_txt = FALSE) %>% 
   reduce(rbind) %>%
-  filter(fiscal_year %in% c("2022","2023"))
+  filter(fiscal_year %in% c("2022","2023")) %>%
+  select(-c(prime_partner_uei, is_indigenous_prime_partner, use_for_age, snu2, snu2uid))
 
 print(distinct(genie,fiscal_year))
 
@@ -38,13 +39,14 @@ print(distinct(genie,fiscal_year))
 msd_files<-list.files(here("Data/site"),pattern="Structured")
 
 msd<-here("Data/site",msd_files) %>%
-  map(read_msd, save_rds=FALSE, remove_txt = FALSE) %>%
+  map(read_psd, save_rds=FALSE, remove_txt = FALSE) %>%
   reduce(rbind)
 
 
 #subset & merge ----------------------------------------------------------------
 msd<-msd %>%
-  filter(fiscal_year %in% c("2020","2021"))
+  filter(fiscal_year %in% c("2020","2021")) %>%
+  select(-c(disaggregate, prime_partner_uei))
 
 print(distinct(msd,fiscal_year))
 
@@ -92,7 +94,7 @@ df_complete<- final %>%
   fill(operatingunit, country, snu1, snu1uid, psnu, psnuuid, facility,
        sitename, operatingunituid, snuprioritization, typemilitary,
        dreams, communityuid,community,facilityuid,sitetype,
-       numeratordenom,indicatortype,disaggregate,categoryoptioncomboname,
+       numeratordenom,indicatortype,standardizeddisaggregate,categoryoptioncomboname,
        age_2018,age_2019,trendscoarse,statushiv,statustb,statuscx,
        hiv_treatment_status,otherdisaggregate,otherdisaggregate_sub,
        modality,source_name,
