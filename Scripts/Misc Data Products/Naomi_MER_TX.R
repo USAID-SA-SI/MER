@@ -41,7 +41,7 @@ genie_files<-list.files(here("Data"),pattern="PSNU_IM") #using MSD to get FY21
 
 genie<-here("Data",genie_files) %>% 
   map(read_msd, save_rds=FALSE, remove_txt = FALSE) %>% 
-  reduce(rbind) %>%
+  reduce(rbind) %>% # appending all Geni files found
   filter(fiscal_year %in% c("2021","2022","2023"))
 
 df_genie<-genie %>% 
@@ -49,7 +49,7 @@ df_genie<-genie %>%
          standardizeddisaggregate %in% c("Age/Sex/HIVStatus",
                                          "Age/Sex/Indication/HIVStatus",
                                          "Total Numerator")) %>% 
-  reshape_msd(direction="long") %>% 
+  reshape_msd(direction="long") %>% #creates period column 
   filter(period_type %in% c("cumulative","targets")) %>% 
   mutate(source="DATIM")
 
@@ -200,7 +200,7 @@ cash<-cash %>%
 prioritization_dhis<-genie %>% 
   distinct(snuprioritization,psnu,psnuuid)
 
-dhis_23<-read_excel(here("Data/dhis/2023", "webDHIS ZA OU5 CDC dataset March 23.xlsx")) %>% 
+dhis_23<-read_excel(here("Data/dhis/2023", "webDHIS ZA OU5 CDC AGG dataset 20230909_Final.xlsx")) %>% 
   setNames(., c('national',
                 'province',
                 'psnu',
@@ -216,8 +216,8 @@ dhis_23<-dhis_23 %>%
   filter(indicator %in% c("ART adult remain on ART end of period",
                           "ART child under 15 years remain on ART end of period",
                           "ART client remain on ART end of month - sum")) %>%
-  gather(mon_yr,value,"10-2021":"03-2023") %>% 
-  filter(mon_yr %in% c("12-2022","03-2023")) %>% 
+  gather(mon_yr,value,"02-2022":"07-2023") %>% 
+  filter(mon_yr %in% c("12-2022","07-2023")) %>% 
   mutate(mon_yr=my(mon_yr)) %>% 
   mutate(period=quarter(mon_yr, with_year = TRUE, fiscal_start = 10),
          period=stringr::str_remove(period, "20"),
@@ -330,9 +330,9 @@ doh_t_new<-read_excel(here("Data", "FY2223_Draft Targets.xlsx"),
 
 df_final<-bind_rows(df_epi,ps,cash,doh_t) %>%
   mutate(trendscoarse=case_when(
-    ageasentered %in% c("0-14","<01","01-04","05-09","10-14") ~ "<15",
-    ageasentered %in% c("15-19","20-24","25-29","30-34","35-39","40-44",
-                        "45-49","50-54","55-59","60-64","65+","25+","15-24")~ "15+")) %>% 
+    ageasentered %in% c("0-14","<01","01-09", "01-04","05-09","10-14") ~ "<15",
+    ageasentered %in% c("15-19","20-24","25-29","25-34", "30-34","35-39", "35-49", "40-44",
+                        "45-49","50+", "50-54","55-59","60-64","65+","25+","15-24")~ "15+")) %>% 
   bind_rows(df_genie,dhis_23,doh_t_new) %>% 
   mutate(short_name=psnu,
          short_name=str_replace_all(short_name, "District Municipality","DM"),
@@ -344,7 +344,12 @@ df_final<-bind_rows(df_epi,ps,cash,doh_t) %>%
          value2=value) %>% 
   spread(indicator2,value2)
 
-  
+# age_check<-df_final %>% 
+#   ungroup() %>% 
+#   filter(source=="NAOMI") %>% 
+#   distinct(trendscoarse,ageasentered)
+# 
+# prinf(age_check)
 
 # EXPORT
 filename<-paste(Sys.Date(),"Naomi_MER_DHIS_NDoH","indicator_age_v1.0.txt",sep="_")
