@@ -12,7 +12,7 @@ library(lubridate)
 psnu_agency<-read_excel(here("Data", "psnu_agency_ref.xlsx"))
 
 
-# get PLHIV from Sept 2021 Naomi | Adopted by estimates TWG---------------------
+# get PLHIV from Sept 2022 Naomi | Adopted by estimates TWG---------------------
 epi_path<-here("Data/Naomi_2022","pepfar_datapack_indicators_2023.csv")
 
 df_epi<-read_csv(epi_path) %>% 
@@ -36,12 +36,12 @@ df_epi<-read_csv(epi_path) %>%
 
 
 #genie -------------------------------------------------------------------------
-genie_files<-list.files(here("Data"),pattern="Structured") #using MSD to get FY21
+genie_files<-list.files(here("Data"),pattern="PSNU_IM") #using MSD to get FY21
 
 
 genie<-here("Data",genie_files) %>% 
   map(read_msd, save_rds=FALSE, remove_txt = FALSE) %>% 
-  reduce(rbind) %>%
+  reduce(rbind) %>% # appending all Geni files found
   filter(fiscal_year %in% c("2021","2022","2023"))
 
 df_genie<-genie %>% 
@@ -49,7 +49,7 @@ df_genie<-genie %>%
          standardizeddisaggregate %in% c("Age/Sex/HIVStatus",
                                          "Age/Sex/Indication/HIVStatus",
                                          "Total Numerator")) %>% 
-  reshape_msd(direction="long") %>% 
+  reshape_msd(direction="long") %>% #creates period column 
   filter(period_type %in% c("cumulative","targets")) %>% 
   mutate(source="DATIM")
 
@@ -61,6 +61,20 @@ df_epi<-df_epi %>%
   left_join(snupriority,by="psnuuid")
 
 
+# DATA CHECK -------------------------------------------------------------------
+data_check<-df_genie %>% 
+  filter(standardizeddisaggregate=="Total Numerator",
+         indicator =="TX_CURR",
+         period_type %in% c("cumulative"),
+         period %in% c("FY23")) %>% 
+  group_by(funding_agency,indicator,period) %>% 
+  summarize_at(vars(value),sum,na.rm=TRUE) %>% 
+  ungroup() %>% 
+  spread(funding_agency,value)
+
+
+print(data_check)
+
 # HIERARCHY
 hierarchy<-genie %>% 
   distinct(snuprioritization,snu1,psnu,psnuuid) %>% 
@@ -68,8 +82,9 @@ hierarchy<-genie %>%
 
 
 # PRIVATE SECTOR DATA ----------------------------------------------------------
-ps<-read_excel(here("Data", "Private Sector_Semi-Anual Data_Jan-June 2022.xlsx"),
-               sheet="ART_Jan-Jun 2022")
+ps<-read_excel(here("Data/ps", "Total ART _ Viral Suppression_SA.xlsx"),
+               sheet="ART Beneficiaries")
+
 
 ps<-ps %>%
   # filter(!District=="District Unknown") %>%
@@ -107,6 +122,7 @@ ps<-ps %>%
   ungroup() %>%
   mutate(standardizeddisaggregate="Age/Sex/HIVStatus",
          period="FY22",
+         period="FY23",
          period_type="cumulative",
          numeratordenom="N",
          indicator="TX_CURR_PS",
@@ -117,68 +133,91 @@ ps<-ps %>%
 
 
 
+
 # CASH PAYING CLIENTS ----------------------------------------------------------
-cash<-read_excel(here("Data", "ART Cash separate years 2017 - 2021 Unique patient counts.xlsx"),
-               sheet="2021 Pivot",
-               skip=2)
+cash<-read_excel(here("Data/ps", "HIV Cash Paying Patients data-Jan-Dec 2022_Sharing.xlsx"),
+                 sheet="2022 Pivot",
+                 skip=2)
+
 
 
 cash<-cash %>% 
-  mutate(District=case_when(
-    District_SANAC=="Nelson Mandela Bay Metropolitan Municipality" ~ str_remove(District_SANAC," Metropolitan"),
-    str_detect(District_SANAC,"OR Tambo") ~ "Oliver Tambo District Municipality",
-    str_detect(District_SANAC,"Thabo") ~ "Thabo Mofutsanyane District Municipality",
-    str_detect(District_SANAC,"khanya") ~ "Umkhanyakude District Municipality",
-    str_detect(District_SANAC,"zinyathi")~ "Umzinyathi District Municipality",
-    str_detect(District_SANAC, "ukela") ~ "Uthukela District Municipality",
-    str_detect(District_SANAC,"Mgcawu") ~ "Zwelentlanga Fatman Mgcawu District Municipality",
-    TRUE ~ District_SANAC
-  )) %>%
-  left_join(hierarchy,by=c("District"="psnu_join")) %>%
-  select(-DrProvince,-District_SANAC,-District) %>% 
-  rename(ageasentered=AgeBand,
-         sex=Gender,
-         value=`Sum of Mutual excl Counts`) %>% 
-  mutate(sex=case_when(
-    sex=="Unspecified" ~ "Unknown",
-    TRUE ~ sex),
-    ageasentered=case_when(
-      ageasentered=="25 and older" ~ "25+",
-      ageasentered=="15 - 24" ~ "15-24",
-      ageasentered=="0 to 14" ~ "0-14",
-      TRUE ~ ageasentered
-    )) %>% 
-  mutate(standardizeddisaggregate="Age/Sex/HIVStatus",
-         period="FY22",
-         period_type="cumulative",
-         numeratordenom="N",
-         indicator="TX_CURR_CASH",
+      clean_names() %>% 
+      mutate(district=case_when(
+        sanac_district=="Nelson Mandela Bay Metropolitan Municipality" ~ str_remove(sanac_district," Metropolitan"),
+        str_detect(sanac_district,"OR Tambo") ~ "Oliver Tambo District Municipality",
+        str_detect(sanac_district,"Thabo") ~ "Thabo Mofutsanyane District Municipality",
+        str_detect(sanac_district,"khanya") ~ "Umkhanyakude District Municipality",
+        str_detect(sanac_district,"zinyathi")~ "Umzinyathi District Municipality",
+        str_detect(sanac_district, "ukela") ~ "Uthukela District Municipality",
+        str_detect(sanac_district,"Mgcawu") ~ "Zwelentlanga Fatman Mgcawu District Municipality",
+        TRUE ~ sanac_district
+      )) %>%
+      left_join(hierarchy,by=c("district"="psnu_join")) %>%
+      select(-district) %>% 
+      rename(ageasentered=age_band,
+             sex=gender,
+             value=sum_of_counts) %>% 
+      mutate(sex=case_when(
+        sex=="Unspecified" ~ "Unknown",
+        TRUE ~ sex),
+        ageasentered=case_when(
+          ageasentered=="25 and older" ~ "25+",
+          ageasentered=="15 - 24" ~ "15-24",
+          ageasentered=="0 to 14" ~ "0-14",
+          ageasentered=="< 5" ~"<5",
+          ageasentered=="5 to 9" ~ "05-09",
+          ageasentered=="10 to 14" ~ "10-14",
+          ageasentered=="15 to 19" ~ "15-19",
+          ageasentered=="20 to 24" ~ "20-24",
+          ageasentered=="25 to 29" ~ "25-29",
+          ageasentered=="30 to 34" ~ "30 to 34",
+          ageasentered=="35 to 39" ~ "35-39",
+          ageasentered=="40 to 44" ~ "40 to 44",
+          ageasentered=="45 to 49" ~ "45-49",
+          ageasentered=="50 to 54" ~ "50-54",
+          ageasentered=="55 to 59" ~ "55-59",
+          ageasentered=="60 to 64" ~ "60-64",
+          ageasentered=="65 to 69" ~ "65-69",
+          ageasentered=="70 to 74" ~ "70-74",
+          ageasentered=="75 to 79" ~ "75-79",
+          ageasentered=="> 80" ~ "80+",
+          ageasentered=="Other"~ "Unknown Age",
+          TRUE ~ ageasentered
+        )) %>% 
+      mutate(standardizeddisaggregate="Age/Sex/HIVStatus",
+             period="FY22",
+             period="FY23",
+             period_type="cumulative",
+             numeratordenom="N",
+             indicator="TX_CURR_CASH",
          DSP="CASH",
          source="Cash Paying") %>% 
   left_join(psnu_agency,by="psnu")
+
 
 # DHIS -------------------------------------------------------------------------
 prioritization_dhis<-genie %>% 
   distinct(snuprioritization,psnu,psnuuid)
 
-dhis_22<-read_excel(here("Data/dhis/2022", "webDHIS ZA OU5 CDC Dec 2022.xlsx")) %>% 
+dhis_23<-read_excel(here("Data/dhis/2023", "webDHIS ZA OU5 CDC AGG dataset 20230909_Final.xlsx")) %>% 
   setNames(., c('national',
                 'province',
                 'psnu',
                 'community',
-                'facility',
                 'code',
+                'facility',
                 'indicator_id',
                 'indicator',
                 format(as.Date(as.numeric(names(.)[9:26]), 
                                origin = '1899-12-30'), '%m-%Y')))
 
-dhis_22<-dhis_22 %>% 
+dhis_23<-dhis_23 %>% 
   filter(indicator %in% c("ART adult remain on ART end of period",
                           "ART child under 15 years remain on ART end of period",
                           "ART client remain on ART end of month - sum")) %>%
-  gather(mon_yr,value,"07-2021":"12-2022") %>% 
-  filter(mon_yr %in% c("09-2022", "12-2022")) %>% 
+  gather(mon_yr,value,"02-2022":"07-2023") %>% 
+  filter(mon_yr %in% c("12-2022","07-2023")) %>% 
   mutate(mon_yr=my(mon_yr)) %>% 
   mutate(period=quarter(mon_yr, with_year = TRUE, fiscal_start = 10),
          period=stringr::str_remove(period, "20"),
@@ -212,7 +251,14 @@ dhis_22<-dhis_22 %>%
     TRUE ~ psnu)) %>% 
   left_join(prioritization_dhis,by="psnu") %>% 
   left_join(psnu_agency,by="psnu")
-  
+
+
+#Hierarchy for NDoH Short Names
+hierarchy_short<-hierarchy %>% 
+  mutate(short_name=psnu_join,
+         short_name=str_remove_all(short_name, " District Municipality"),
+         short_name=str_remove_all(short_name, " Metropolitan Municipality"))
+
   
 #Hierarchy for NDoH Short Names
 hierarchy_short<-hierarchy %>% 
@@ -284,10 +330,10 @@ doh_t_new<-read_excel(here("Data", "FY2223_Draft Targets.xlsx"),
 
 df_final<-bind_rows(df_epi,ps,cash,doh_t) %>%
   mutate(trendscoarse=case_when(
-    ageasentered %in% c("0-14","<01","01-04","05-09","10-14") ~ "<15",
-    ageasentered %in% c("15-19","20-24","25-29","30-34","35-39","40-44",
-                        "45-49","50-54","55-59","60-64","65+","25+","15-24")~ "15+")) %>% 
-  bind_rows(df_genie,dhis_22,doh_t_new) %>% 
+    ageasentered %in% c("0-14","<01","01-09", "01-04","05-09","10-14") ~ "<15",
+    ageasentered %in% c("15-19","20-24","25-29","25-34", "30-34","35-39", "35-49", "40-44",
+                        "45-49","50+", "50-54","55-59","60-64","65+","25+","15-24")~ "15+")) %>% 
+  bind_rows(df_genie,dhis_23,doh_t_new) %>% 
   mutate(short_name=psnu,
          short_name=str_replace_all(short_name, "District Municipality","DM"),
          short_name=str_replace_all(short_name, "Metropolitan Municipality", "MM")) %>% 
@@ -298,10 +344,16 @@ df_final<-bind_rows(df_epi,ps,cash,doh_t) %>%
          value2=value) %>% 
   spread(indicator2,value2)
 
-  
+# age_check<-df_final %>% 
+#   ungroup() %>% 
+#   filter(source=="NAOMI") %>% 
+#   distinct(trendscoarse,ageasentered)
+# 
+# prinf(age_check)
 
 # EXPORT
-filename<-paste(Sys.Date(),"COP23Analytics_Naomi_MER_DHIS_NDoH","indicator_age_v1.0.txt",sep="_")
+filename<-paste(Sys.Date(),"Naomi_MER_DHIS_NDoH","indicator_age_v1.0.txt",sep="_")
 
 write_tsv(df_final, file.path(here("Dataout"),filename,na=""))
+
 
