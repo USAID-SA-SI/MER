@@ -216,8 +216,8 @@ dhis_23<-dhis_23 %>%
   filter(indicator %in% c("ART adult remain on ART end of period",
                           "ART child under 15 years remain on ART end of period",
                           "ART client remain on ART end of month - sum")) %>%
-  gather(mon_yr,value,"02-2022":"07-2023") %>% 
-  filter(mon_yr %in% c("12-2022","07-2023")) %>% 
+  gather(mon_yr,value,"02-2022":"06-2023") %>% 
+  filter(mon_yr %in% c("12-2022","06-2023")) %>% 
   mutate(mon_yr=my(mon_yr)) %>% 
   mutate(period=quarter(mon_yr, with_year = TRUE, fiscal_start = 10),
          period=stringr::str_remove(period, "20"),
