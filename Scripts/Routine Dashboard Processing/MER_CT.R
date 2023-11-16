@@ -8,7 +8,7 @@ library(glamr)
 # devtools::install_github("USAID-OHA-SI/glamr")
 
 
-current_pd<-"FY23Q3c" #change each time to refelct current period
+current_pd<-"FY23Q4i" #change each time to reflect current period
 
 # READ IN FILES ----------------------------------------------------------------
 ind_ref<-pull(read_excel(here("Data", "indicator_ref.xlsx"),
@@ -33,12 +33,30 @@ genie<-here("Data",genie_files) %>%
 
 print(distinct(genie,fiscal_year))
 
+#bring in 2022 data - remove one DATIM is fixed 
+genie_files_2022<-list.files(here("Data/Archive"),pattern="Daily")
+
+
+genie_2022<-here("Data/Archive",genie_files_2022) %>% 
+  map(read_psd, save_rds=FALSE, remove_txt = FALSE) %>% 
+  reduce(rbind) %>%
+  select(-c(prime_partner_uei, is_indigenous_prime_partner, use_for_age)) %>%
+  filter(fiscal_year %in% c("2022"))
+
+print(distinct(genie_2022,fiscal_year))
+
+genie <- rbind(genie, genie_2022) %>%
+        filter(indicator %in% ind_ref)
+
+print(distinct(genie,fiscal_year))
+
+rm(genie_2022)
 
 #MSD
 msd_files<-list.files(here("Data"),pattern="Frozen")
 
 msd<-here("Data",msd_files) %>%
-  map(read_msd, save_rds=FALSE, remove_txt = FALSE) %>%
+  map(read_psd, save_rds=FALSE, remove_txt = FALSE) %>%
   reduce(rbind)
 
 
@@ -129,7 +147,7 @@ data_check<-final %>%
          DSP=="Yes",
          period_type %in% c("results"),
          period %in% c("FY22Q1","FY22Q2","FY22Q3","FY22Q4",
-                       "FY23Q1", "FY23Q2", "FY23Q3")) %>% 
+                       "FY23Q1", "FY23Q2", "FY23Q3", "FY23Q4")) %>% 
   group_by(funding_agency,indicator,period) %>% 
   summarize_at(vars(value),sum,na.rm=TRUE) %>% 
   ungroup() %>% 
