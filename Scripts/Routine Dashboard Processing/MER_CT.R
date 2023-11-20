@@ -33,24 +33,6 @@ genie<-here("Data",genie_files) %>%
 
 print(distinct(genie,fiscal_year))
 
-#bring in 2022 data - remove one DATIM is fixed 
-genie_files_2022<-list.files(here("Data/Archive"),pattern="Daily")
-
-
-genie_2022<-here("Data/Archive",genie_files_2022) %>% 
-  map(read_psd, save_rds=FALSE, remove_txt = FALSE) %>% 
-  reduce(rbind) %>%
-  select(-c(prime_partner_uei, is_indigenous_prime_partner, use_for_age)) %>%
-  filter(fiscal_year %in% c("2022"))
-
-print(distinct(genie_2022,fiscal_year))
-
-genie <- rbind(genie, genie_2022) %>%
-        filter(indicator %in% ind_ref)
-
-print(distinct(genie,fiscal_year))
-
-rm(genie_2022)
 
 #MSD
 msd_files<-list.files(here("Data"),pattern="Frozen")
@@ -160,7 +142,7 @@ print(data_check)
   
 # Dataout ----------------------------------------------------------------------
 
-filename<-paste(Sys.Date(),"MER_CTX",current_pd,"attributes_fy15-23.txt",sep="_")
+filename<-paste(Sys.Date(),"MER_CTX",current_pd, "v1.1", "attributes_fy15-23.txt",sep="_")
 
 write_tsv(final, file.path(here("Dataout"),filename,na=""))
 
