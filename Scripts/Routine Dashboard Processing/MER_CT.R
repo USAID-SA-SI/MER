@@ -8,7 +8,7 @@ library(glamr)
 # devtools::install_github("USAID-OHA-SI/glamr")
 
 
-current_pd<-"FY23Q4i" #change each time to reflect current period
+current_pd<-"FY24Q1i" #change each time to reflect current period
 
 # READ IN FILES ----------------------------------------------------------------
 ind_ref<-pull(read_excel(here("Data", "indicator_ref.xlsx"),
@@ -45,8 +45,8 @@ msd<-here("Data",msd_files) %>%
 #subset & merge ----------------------------------------------------------------
 msd<-msd %>%
   filter(fiscal_year %in% c("2015","2016",
-                            "2017", "2018","2019","2020","2021")) %>%
-  select(-c(disaggregate, prime_partner_uei ))
+                            "2017", "2018","2019","2020","2021", "2022")) %>%
+  select(-c(prime_partner_uei, is_indigenous_prime_partner, use_for_age ))
 
 print(distinct(msd,fiscal_year))
 
@@ -129,7 +129,7 @@ data_check<-final %>%
          DSP=="Yes",
          period_type %in% c("results"),
          period %in% c("FY22Q1","FY22Q2","FY22Q3","FY22Q4",
-                       "FY23Q1", "FY23Q2", "FY23Q3", "FY23Q4")) %>% 
+                       "FY23Q1", "FY23Q2", "FY23Q3", "FY23Q4", "FY24Q1")) %>% 
   group_by(funding_agency,indicator,period) %>% 
   summarize_at(vars(value),sum,na.rm=TRUE) %>% 
   ungroup() %>% 
@@ -142,7 +142,7 @@ print(data_check)
   
 # Dataout ----------------------------------------------------------------------
 
-filename<-paste(Sys.Date(),"MER_CTX",current_pd, "v1.1", "attributes_fy15-23.txt",sep="_")
+filename<-paste(Sys.Date(),"MER_CTX",current_pd, "v1.0", "attributes_fy15-24.txt",sep="_")
 
 write_tsv(final, file.path(here("Dataout"),filename,na=""))
 
