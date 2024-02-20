@@ -4,7 +4,7 @@ library(gophr)
 library(here)
 library(glamr)
 
-current_pd<-"FY23Q3c" #change each period
+current_pd<-"FY24Q1c" #change each period
 
 
 # READ IN FILES ----------------------------------------------------------------
@@ -19,7 +19,7 @@ genie_files<-list.files(here("Data"),pattern="Daily")
 genie<-here("Data",genie_files) %>%
   map(read_msd, save_rds=FALSE, remove_txt = FALSE) %>%
   reduce(rbind) %>%
-  filter(fiscal_year %in% c("2023")) %>% select(-use_for_age)
+  filter(fiscal_year %in% c("2023","2024")) %>% select(-use_for_age)
 
 print(distinct(genie,fiscal_year))
 
