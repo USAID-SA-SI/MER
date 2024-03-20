@@ -8,7 +8,7 @@ library(glamr)
 # devtools::install_github("USAID-OHA-SI/glamr")
 
 
-current_pd<-"FY24Q1i" #change each time to reflect current period
+current_pd<-"FY24Q1c" #change each time to reflect current period
 
 # READ IN FILES ----------------------------------------------------------------
 ind_ref<-pull(read_excel(here("Data", "indicator_ref.xlsx"),
