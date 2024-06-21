@@ -8,7 +8,7 @@ library(glamr)
 # devtools::install_github("USAID-OHA-SI/glamr")
 
 
-current_pd<-"FY24Q1c" #change each time to reflect current period
+current_pd<-"FY24Q2c" #change each time to reflect current period
 
 # READ IN FILES ----------------------------------------------------------------
 ind_ref<-pull(read_excel(here("Data", "indicator_ref.xlsx"),
@@ -26,7 +26,7 @@ genie_files<-list.files(here("Data"),pattern="Daily")
 
 
 genie<-here("Data",genie_files) %>% 
-  map(read_psd, save_rds=FALSE, remove_txt = FALSE) %>% 
+  map(read_psd) %>% 
   reduce(rbind) %>%
   select(-c(prime_partner_uei, is_indigenous_prime_partner, use_for_age))
   #filter(fiscal_year %in% c("2022","2023"))
@@ -38,7 +38,7 @@ print(distinct(genie,fiscal_year))
 msd_files<-list.files(here("Data"),pattern="Frozen")
 
 msd<-here("Data",msd_files) %>%
-  map(read_psd, save_rds=FALSE, remove_txt = FALSE) %>%
+  map(read_psd) %>%
   reduce(rbind)
 
 
@@ -60,7 +60,7 @@ rm(genie,msd)
 
 
 # CONTEXT FILES IN -------------------------------------------------------------
-dsp_lookback<-read_excel(here("Data","dsp_attributes_2022-05-17.xlsx")) %>% 
+dsp_lookback<-read_excel(here("Data","dsp_attributes_2024-04-08.xlsx")) %>% 
   rename(agency_lookback=`Agency lookback`) %>% 
   select(-MechanismID)
 
@@ -129,7 +129,7 @@ data_check<-final %>%
          DSP=="Yes",
          period_type %in% c("results"),
          period %in% c("FY22Q1","FY22Q2","FY22Q3","FY22Q4",
-                       "FY23Q1", "FY23Q2", "FY23Q3", "FY23Q4", "FY24Q1")) %>% 
+                       "FY23Q1", "FY23Q2", "FY23Q3", "FY23Q4", "FY24Q1", "FY24Q2")) %>% 
   group_by(funding_agency,indicator,period) %>% 
   summarize_at(vars(value),sum,na.rm=TRUE) %>% 
   ungroup() %>% 
