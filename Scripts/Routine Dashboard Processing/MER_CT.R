@@ -10,6 +10,7 @@ library(glamr)
 
 current_pd<-"FY24Q2c" #change each time to reflect current period
 
+
 # READ IN FILES ----------------------------------------------------------------
 ind_ref<-pull(read_excel(here("Data", "indicator_ref.xlsx"),
               sheet="TX"))
@@ -26,10 +27,13 @@ genie_files<-list.files(here("Data"),pattern="Daily")
 
 
 genie<-here("Data",genie_files) %>% 
+<<<<<<< HEAD
   map(read_psd) %>% 
+=======
+  map(read_msd, save_rds=FALSE, remove_txt = FALSE) %>% 
+>>>>>>> f511d66dd5666ad1bb2bfb2316899cfb8ca887a6
   reduce(rbind) %>%
-  select(-c(prime_partner_uei, is_indigenous_prime_partner, use_for_age))
-  #filter(fiscal_year %in% c("2022","2023"))
+  filter(fiscal_year %in% c("2022","2023"))
 
 print(distinct(genie,fiscal_year))
 
@@ -38,7 +42,12 @@ print(distinct(genie,fiscal_year))
 msd_files<-list.files(here("Data"),pattern="Frozen")
 
 msd<-here("Data",msd_files) %>%
+<<<<<<< HEAD
   map(read_psd) %>%
+=======
+  map(read_msd, save_rds=FALSE, remove_txt = FALSE) %>%
+  map(read_psd, save_rds=FALSE, remove_txt = FALSE) %>%
+>>>>>>> f511d66dd5666ad1bb2bfb2316899cfb8ca887a6
   reduce(rbind)
 
 
@@ -47,6 +56,7 @@ msd<-msd %>%
   filter(fiscal_year %in% c("2015","2016",
                             "2017", "2018","2019","2020","2021", "2022")) %>%
   select(-c(prime_partner_uei, is_indigenous_prime_partner, use_for_age ))
+
 
 print(distinct(msd,fiscal_year))
 
@@ -64,15 +74,15 @@ dsp_lookback<-read_excel(here("Data","dsp_attributes_2024-04-08.xlsx")) %>%
   rename(agency_lookback=`Agency lookback`) %>% 
   select(-MechanismID)
 
-# # TB ART QUARTERLY -------------------------------------------------------------
-# tb_files<-list.files(here("Data/TB_ART"),pattern="TB")
-# 
-# tb<-here("Data/TB_ART",tb_files) %>%
-#   map(read_tsv) %>%
-#   reduce(bind_rows) %>% 
-#   select(-dataElementName,-attributeOptionCombo) %>% 
-#   mutate(indicator="TB_ART_NDOH_QUARTERLY",
-#          mech_code=as.character(mech_code))
+# TB ART QUARTERLY -------------------------------------------------------------
+tb_files<-list.files(here("Data/TB_ART"),pattern="TB")
+
+tb<-here("Data/TB_ART",tb_files) %>%
+  map(read_tsv) %>%
+  reduce(bind_rows) %>% 
+  select(-dataElementName,-attributeOptionCombo) %>% 
+  mutate(indicator="TB_ART_NDOH_QUARTERLY",
+         mech_code=as.character(mech_code))
 
 
 
@@ -142,6 +152,7 @@ print(data_check)
   
 # Dataout ----------------------------------------------------------------------
 
+filename<-paste(Sys.Date(),"MER_CTX",current_pd,"attributes_fy15-23.txt",sep="_")
 filename<-paste(Sys.Date(),"MER_CTX",current_pd, "v1.0", "attributes_fy15-24.txt",sep="_")
 
 write_tsv(final, file.path(here("Dataout"),filename,na=""))
