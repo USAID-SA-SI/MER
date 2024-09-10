@@ -66,29 +66,12 @@ genie <- genie %>%
          short_name=str_replace_all(short_name, "Metropolitan Municipality", "MM")) %>% 
   unite(DSPID,mech_code,short_name,sep="",remove=FALSE)
 
-final<-genie %>% 
-       #reshape_msd("long") %>% 
-       left_join(dsp_lookback,by="DSPID") %>% 
-       clean_indicator() %>% 
-       filter(indicator %in% c("HTS_TST", "HTS_INDEX", "HTS_TST_POS", "TX_NEW", 
-                               "TX_NET_NEW", "TX_CURR", "TX_PVLS", "TX_PVLS_D", "TB_STAT", 
-                               "TB_STAT_D", "TB_PREV", "TB_PREV_D", "PrEP_NEW"), 
-              standardizeddisaggregate %in% c("Total Numerator", "Total Denominator"), 
-              funding_agency == "USAID") %>% 
-    group_by(fiscal_year, funding_agency, indicator, mech_code, psnu) %>% 
-    summarise(across(c(starts_with("qtr"), cumulative, targets),
-                   sum, na.rm = TRUE), .groups = "drop")
 
+# FUNCTION -------------------------------------------------------------------
 
-final_long <- final %>% 
-              reshape_msd(qtrs_keep_cumulative = TRUE) 
-
-
-### GT table 
-mech_code <- "70310"
-
-make_target_table <- function(type, name) {
+make_target_table <- function(type, name, save = FALSE) {
   
+  #filter
   df_genie <- genie %>% 
     left_join(dsp_lookback,by="DSPID") %>% 
     clean_indicator() %>% 
@@ -99,6 +82,7 @@ make_target_table <- function(type, name) {
            standardizeddisaggregate %in% c("Total Numerator", "Total Denominator"), 
            funding_agency == "USAID")
   
+  #conditional filter by type
   if (type == "mech_code") {
     
     df_genie <- df_genie %>% 
@@ -109,32 +93,26 @@ make_target_table <- function(type, name) {
       filter(str_detect(psnu, name))
   }
   
+  #group by summarize by type
   df_genie_final <- df_genie %>% 
   group_by(fiscal_year, funding_agency, indicator, across(all_of(type))) %>% 
     summarise(across(c(starts_with("qtr"), cumulative, targets),
                      sum, na.rm = TRUE), .groups = "drop") %>% 
-    adorn_achievement() %>% 
+    adorn_achievement(qtr = 3) %>% 
     mutate(achv_desc = as.character(achv_desc)) %>% 
     mutate(achv_desc = ifelse(indicator == "TX_NET_NEW", "NA", achv_desc),
            achievement = ifelse(indicator == "TX_NET_NEW", NA, achievement),
            achv_color = ifelse(indicator == "TX_NET_NEW", trolley_grey_light, achv_color))
-    # mutate(
-    #   achv_desc = case_when(
-    #     indicator == "TX_NET_NEW" ~ fct_relevel(achv_desc, "NA"),  # Relevel only when indicator is "TX_NET_NEW"
-    #     TRUE ~ achv_desc  # Otherwise, keep it unchanged
-    #   )
-    # )
   
-  
+  #generate gt table - decide what theme we want and if we want spanners
   table <- df_genie_final %>%
-    select(indicator, starts_with("qtr"), cumulative, targets, achievement, achv_desc, achv_color) %>%
+    select(indicator, starts_with("qtr"), cumulative, targets, achievement, achv_desc, achv_label, achv_color) %>%
     set_names(~ toupper(.)) %>%  # Automatically capitalize column names
     gt() %>% 
     gtayblr::si_gt_base() %>% 
     #gtExtras::gt_theme_nytimes() %>%
     sub_missing(missing_text = ".",
     ) %>%
-   # cols_label(indicator)
     fmt_number(columns = c(2,3,4,5,6,7),
                decimals = 0) %>%
     fmt_percent(columns = c(8), 
@@ -176,16 +154,52 @@ make_target_table <- function(type, name) {
     cols_hide(columns= c(ACHV_COLOR, QTR4)) %>% 
     tab_header(
       title = glue("{name} - {metadata$curr_pd} MER Results and Targets"))
+  
+  
+  if (save == TRUE) {
+    table %>%
+      gtExtras::gtsave_extra(path = "Images", filename = glue::glue("{name}_{metadata$curr_pd}_target_table.png"))
+  }
+  
     
     
   
   return(table)
 }
 
+#test function
+make_target_table(type = "mech_code", name = "70287") %>% 
+  gtsave_extra(filename = glue::glue("70287_FY24Q3_target_table.png")) #save function not workings
 
-make_target_table(type = "mech_code", name = "70287")
+
 make_target_table(type = "psnu", name = "Alfred Nzo") #uses a str_detect
 
+mech_list <- c('70287', "70301", "70290", "70310", "80007", "70306") # check me on this plz
 
 
+make_target_table
+
+map(mech_list, ~make_target_table(type = "mech_code", name= .x))
+
+
+# final<-genie %>% 
+#        #reshape_msd("long") %>% 
+#        left_join(dsp_lookback,by="DSPID") %>% 
+#        clean_indicator() %>% 
+#        filter(indicator %in% c("HTS_TST", "HTS_INDEX", "HTS_TST_POS", "TX_NEW", 
+#                                "TX_NET_NEW", "TX_CURR", "TX_PVLS", "TX_PVLS_D", "TB_STAT", 
+#                                "TB_STAT_D", "TB_PREV", "TB_PREV_D", "PrEP_NEW"), 
+#               standardizeddisaggregate %in% c("Total Numerator", "Total Denominator"), 
+#               funding_agency == "USAID") %>% 
+#     group_by(fiscal_year, funding_agency, indicator, mech_code, psnu) %>% 
+#     summarise(across(c(starts_with("qtr"), cumulative, targets),
+#                    sum, na.rm = TRUE), .groups = "drop")
+# 
+# 
+# final_long <- final %>% 
+#               reshape_msd(qtrs_keep_cumulative = TRUE) 
+# 
+# 
+# ### GT table 
+# mech_code <- "70310"
 
