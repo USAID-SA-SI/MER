@@ -23,7 +23,8 @@
   library(gt)
   library(gtExtras)
 
-
+devtools::install_github("USAID-SA-SI/gtayblr") #OHA custom gt package - in development
+library(gtayblr)
   
 
 # GLOBAL VARIABLES --------------------------------------------------------
