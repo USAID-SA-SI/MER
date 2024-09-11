@@ -78,7 +78,7 @@ make_target_table <- function(type, name, save = FALSE) {
   df_genie <- genie %>% 
     left_join(dsp_lookback,by="DSPID") %>% 
     clean_indicator() %>% 
-    filter(indicator %in% c("HTS_TST", "HTS_INDEX_NEWPOS", "HTS_INDEX_NEWNEG" , "HTS_TST_POS", "TX_NEW", 
+    filter(indicator %in% c("HTS_TST", "HTS_INDEX", "HTS_TST_POS", "TX_NEW", 
                             "TX_NET_NEW", "TX_CURR", "TX_PVLS", "TX_PVLS_D", "TB_STAT", 
                             "TB_STAT_D", "TB_PREV", "TB_PREV_D", "PrEP_NEW"), 
            fiscal_year == metadata$curr_fy,
@@ -107,7 +107,8 @@ make_target_table <- function(type, name, save = FALSE) {
     mutate(achv_desc = as.character(achv_desc)) %>% 
     mutate(achv_desc = ifelse(indicator == "TX_NET_NEW", "NA", achv_desc),
            achievement = ifelse(indicator == "TX_NET_NEW", NA, achievement),
-           achv_color = ifelse(indicator == "TX_NET_NEW", trolley_grey_light, achv_color))
+           achv_color = ifelse(indicator == "TX_NET_NEW", trolley_grey_light, achv_color),
+           cumulative = ifelse(indicator == "TX_NET_NEW", NA, cumulative))
   
   #generate gt table - decide what theme we want and if we want spanners
   table <- df_genie_final %>%
@@ -156,7 +157,7 @@ make_target_table <- function(type, name, save = FALSE) {
     #   ),
     #   locations = cells_column_spanners(spanners = "FY24 Results")
     # ) %>%
-    cols_hide(columns= c(ACHV_COLOR, QTR3)) %>% 
+    cols_hide(columns= c(ACHV_COLOR, QTR4)) %>% 
     tab_header(
       title = glue("{name} - FY24Q3 MER Results and Targets"))
   
