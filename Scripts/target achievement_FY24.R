@@ -44,6 +44,8 @@ metadata <- get_metadata(filepath)
 
 ref_id <- "cf5a4baf"
 
+glamr::folder_setup() #make sure you are working in the MER project
+
 # IMPORT ------------------------------------------------------------------
 
 #genie 
@@ -135,12 +137,10 @@ make_target_table <- function(type, name, save = FALSE) {
   #generate gt table - decide what theme we want and if we want spanners
   table <- df_genie_final %>%
     select(indicator, starts_with("qtr"), cumulative, targets, achievement, achv_desc, achv_label, achv_color) %>%
-    #set_names(~ toupper(.)) %>%  # Automatically capitalize column names
     gt() %>% 
     gtayblr::si_gt_base() %>% 
     cols_label(achv_desc = "Status",
                achv_label = "Legend") %>% 
-    #gtExtras::gt_theme_nytimes() %>%
     sub_missing(missing_text = ".",
     ) %>%
     fmt_number(columns = c(2,3,4,5,6,7),
@@ -182,6 +182,9 @@ make_target_table <- function(type, name, save = FALSE) {
   return(table)
 }
 
+# APPLY -------------------------------------------------------------------
+
+
 #produce tables 
 
 #use mech codes for partners 
@@ -190,8 +193,7 @@ make_target_table(type = "mech_code", name = "70287", save = TRUE)
 #use psnu name for psnu table 
 make_target_table(type = "psnu", name = "Johannesburg") #uses a str_detect
 
-#gtsave_extra(filename = glue::glue("70287_FY24Q3_target_table.png")) #save function not workings
-
+# ITERATE -------------------------------------------------------------------
 
 #to iterate over multiple psnus, you can list them below
 
@@ -205,27 +207,8 @@ psnu_list <- c("Johannesburg", "Sedibeng", "Cape Town",
                "Alfred Nzo", "Buffalo City",
                "Thabo", "Ehlanzeni",
                "Lejweleputswa") 
+
 map(psnu_list, ~make_target_table(type = "psnu", name= .x, save= TRUE))
 
 
-# final<-genie %>% 
-#        #reshape_msd("long") %>% 
-#        left_join(dsp_lookback,by="DSPID") %>% 
-#        clean_indicator() %>% 
-#        filter(indicator %in% c("HTS_TST", "HTS_INDEX", "HTS_TST_POS", "TX_NEW", 
-#                                "TX_NET_NEW", "TX_CURR", "TX_PVLS", "TX_PVLS_D", "TB_STAT", 
-#                                "TB_STAT_D", "TB_PREV", "TB_PREV_D", "PrEP_NEW"), 
-#               standardizeddisaggregate %in% c("Total Numerator", "Total Denominator"), 
-#               funding_agency == "USAID") %>% 
-#     group_by(fiscal_year, funding_agency, indicator, mech_code, psnu) %>% 
-#     summarise(across(c(starts_with("qtr"), cumulative, targets),
-#                    sum, na.rm = TRUE), .groups = "drop")
-# 
-# 
-# final_long <- final %>% 
-#               reshape_msd(qtrs_keep_cumulative = TRUE) 
-# 
-# 
-# ### GT table 
-# mech_code <- "70310"
 
