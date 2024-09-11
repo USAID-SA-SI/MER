@@ -78,7 +78,7 @@ make_target_table <- function(type, name, save = FALSE) {
   df_genie <- genie %>% 
     left_join(dsp_lookback,by="DSPID") %>% 
     clean_indicator() %>% 
-    filter(indicator %in% c("HTS_TST", "HTS_INDEX", "HTS_TST_POS", "TX_NEW", 
+    filter(indicator %in% c("HTS_TST", "HTS_INDEX_NEWPOS", "HTS_INDEX_NEWNEG" , "HTS_TST_POS", "TX_NEW", 
                             "TX_NET_NEW", "TX_CURR", "TX_PVLS", "TX_PVLS_D", "TB_STAT", 
                             "TB_STAT_D", "TB_PREV", "TB_PREV_D", "PrEP_NEW"), 
            fiscal_year == metadata$curr_fy,
@@ -156,7 +156,7 @@ make_target_table <- function(type, name, save = FALSE) {
     #   ),
     #   locations = cells_column_spanners(spanners = "FY24 Results")
     # ) %>%
-    cols_hide(columns= c(ACHV_COLOR, QTR4)) %>% 
+    cols_hide(columns= c(ACHV_COLOR, QTR3)) %>% 
     tab_header(
       title = glue("{name} - FY24Q3 MER Results and Targets"))
   
@@ -175,20 +175,20 @@ make_target_table <- function(type, name, save = FALSE) {
 #produce tables 
 
 #use mech codes for partners 
-make_target_table(type = "mech_code", name = "70310") 
+make_target_table(type = "mech_code", name = "70301") 
 
 #use psnu name for psnu table 
-make_target_table(type = "psnu", name = "Alfred Nzo") #uses a str_detect
+make_target_table(type = "psnu", name = "Lej") #uses a str_detect
 
 #gtsave_extra(filename = glue::glue("70287_FY24Q3_target_table.png")) #save function not workings
 
 
 #to iterate over multiple psnus, you can list them below
 
-mech_list <- c("87575","70310") 
+mech_list <- c("87575","70310", "70301") 
 map(mech_list, ~make_target_table(type = "mech_code", name= .x))
 
-psnu_list <- c("Harry Gwala", "King Cetshwayo", "Ugu", "Cape Town" ) 
+psnu_list <- c("Harry Gwala", "King Cetshwayo", "Ugu", "Cape Town", "Lej") 
 map(psnu_list, ~make_target_table(type = "psnu", name= .x))
 
 
