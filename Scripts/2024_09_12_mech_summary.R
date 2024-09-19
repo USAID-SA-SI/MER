@@ -114,16 +114,25 @@
    clean_agency() |> 
    filter(!is.na(indicator)) 
  
+ 
+ # Define bounding box for mainland South Africa (adjust as needed)
+ bbox_mainland <- st_bbox(c(xmin = 16, xmax = 33, ymin = -35, ymax = -22), crs = st_crs(cov))
+ 
+ # Ensure geometries are valid before cropping
+ ou_sf_valid <- st_make_valid(ou_sf)
+ 
+ # Crop the datasets to the bounding box
+ cov_mainland <- st_crop(cov, bbox_mainland)
+ ou_sf_mainland <- st_crop(ou_sf_valid, bbox_mainland)
+ 
+ # Plot with cropped data
  ggplot() +
-  # geom_sf(data = psnu_zmb, fill = grey10k, size = 0.05) +
-   geom_sf(data = cov, aes(fill = funding_agency), color = "white", alpha = 0.75) +
-   geom_sf(data = ou_sf, fill = NA, color = grey90k, size = 0.5) +
+   geom_sf(data = cov_mainland, aes(fill = funding_agency), color = "white", alpha = 0.75) +
+   geom_sf(data = ou_sf_mainland, fill = NA, color = grey90k, size = 0.5) +
    scale_fill_manual(values = c("USAID" = old_rose, "CDC" = denim)) +
    facet_wrap(~ indicator, nrow = 1) +
-   si_style_map(facet_space = 0.5)+
+   si_style_map(facet_space = 0.5) +
    theme(legend.position = "none")
- 
- si_save("Graphics/FY224_coverage_map.svg")
    
  
 # SPINDOWN ============================================================================
